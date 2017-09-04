@@ -46,8 +46,6 @@ _use_structure_edge = True
 _enhance_edge = True
 _gray_value_redistribution_local = True
 _record_by_csv = False
-#check if combine the ouput before the obviousity filter
-_combine_two_edge_result_before_filter_obvious = True
 _evaluate = False
 
 
@@ -130,7 +128,7 @@ def main():
         final_differ_edge_group = []
         
         #check if two edge detection method is both complete
-        twice = False
+       
         for j in xrange(2):
             
             edge_type = 'structure'
@@ -466,188 +464,185 @@ def main():
             #====================================================================================
             
             # line 536 - line 632 combine two edge detection results
-            if _combine_two_edge_result_before_filter_obvious :
-                for f_edge_group in final_group:
-                    final_differ_edge_group.append(f_edge_group)
-                                      
-                if not twice :
-                    twice = True
-                    continue
-                
-                # check two edge contour overlap
-                compare_overlap_queue = []
-                total_group_number = len( final_differ_edge_group )
-                
-                for group_index in range( total_group_number ):
-                    cnt_group = final_differ_edge_group[group_index]['group_dic']
-            
-                    for cnt_dic in cnt_group:
-                        compare_overlap_queue.append( { 'cnt':cnt_dic['cnt'], 'label':group_index, 'group_weight':len(cnt_group), 'cnt_dic':cnt_dic  } )
-                
-                _label = [x['label'] for x in compare_overlap_queue]
-                print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]
-                
-                compare_overlap_queue = CheckOverlap( compare_overlap_queue, keep = 'group_weight' )  
-                
-                contour_image[:] = BLACK
-                _label = [x['label'] for x in compare_overlap_queue]
-                
-                print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]                
-                final_group = []            
-                
-                for label_i in range( total_group_number ):
-                #for label in unique_label :
-                    contour_image_each = image_resi.copy()
-                    # darken the image to make the contour visible
-                    contour_image_each[:] = contour_image_each[:]/3.0
-                    COLOR = switchColor[ color_index % len(switchColor) ]
-                    color_index += 1
-                    tmp_group = []
-                    for i in xrange( len(compare_overlap_queue) ):
-                        if compare_overlap_queue[i]['label'] == label_i :
-                            tmp_group.append( compare_overlap_queue[i]['cnt_dic'] ) 
-                           
-                    if len(tmp_group) < 1 :
-                        continue                    
 
-                    tmp_cnt_group = []
-                    avg_color_gradient = 0.0
-                    avg_shape_factor = 0.0
-                    tmp_area = 0.0
-                    
-                    
-                    
-                    #for each final group count obvious factor
-                    for cnt_dic in tmp_group:
-                        cnt = cnt_dic['cnt']
-                        cnt_area = cv2.contourArea(cnt)
-                        tmp_area += cnt_area
-                        avg_shape_factor += cnt_area/float(cv2.contourArea(cv2.convexHull(cnt)))
-                        avg_color_gradient += cnt_dic['color_gradient']
-                        tmp_cnt_group.append(cnt)
-                    
-                    avg_shape_factor /= float(len(tmp_group))
-                    avg_color_gradient /= float(len(tmp_group))
-                    avg_area = tmp_area / float(len(tmp_group))
-                    
-                    if len(tmp_cnt_group) < 2 :
-                        continue
-                    
-                    
-                    
-                
-                    cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
-                    cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
-                    
-                    
-                    final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'group_dic':tmp_group } )
-                    
-                    contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
-                                 
-                # end find final group for  
-                
-                if _showImg['original_result']:
-                    cv2.imshow(fileName+' remove_overlap_combine_cnt', ShowResize(contour_image) )
-                    cv2.waitKey(100)     
-                if _writeImg['original_result']:
-                    cv2.imwrite( output_path + fileName[:-4] +'_g_remove_overlap_combine_cnt.jpg', contour_image )                
-             
-            # end _combine_two_edge_result_before_filter_obvious if 
-            #====================================================================================
-                      
-            # line 637 - line 712 obviousity filter
-            obvious_list = ['cover_area','color_gradient','shape_factor']
-            #sort final cnt group by cover_area , shape_factor and color_gradient
-            for obvious_para in obvious_list:
-                
-                if obvious_para == 'color_gradient':
-                    avg_img_gradient = Avg_Img_Gredient(image_resi)
-                    final_group.append( { 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 } )
-                   
-                final_group.sort( key = lambda x:x[obvious_para], reverse = True )
-                obvious_index = len(final_group)-1
-                max_diff = 0
-                area_list = [ final_group[0][obvious_para] ]
-                
-                if obvious_para == 'color_gradient' and final_group[0]['obvious_weight'] < 0 :
-                    final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
-                    print 'No color_gradient result'
-                    continue
-                    
+            for f_edge_group in final_group:
+                final_differ_edge_group.append(f_edge_group)            
+        # end two edge method for
+     
+        # check two edge contour overlap
+        compare_overlap_queue = []
+        total_group_number = len( final_differ_edge_group )
+        
+        for group_index in range( total_group_number ):
+            cnt_group = final_differ_edge_group[group_index]['group_dic']
     
-                    
-                for i in range( 1, len( final_group ) ):
-                    area_list.append(final_group[i][obvious_para])
-                    diff = final_group[i-1][obvious_para] - final_group[i][obvious_para] 
+            for cnt_dic in cnt_group:
+                compare_overlap_queue.append( { 'cnt':cnt_dic['cnt'], 'label':group_index, 'group_weight':len(cnt_group), 'cnt_dic':cnt_dic  } )
+        
+        _label = [x['label'] for x in compare_overlap_queue]
+        print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]
+        
+        compare_overlap_queue = CheckOverlap( compare_overlap_queue, keep = 'group_weight' )  
+        
+        contour_image[:] = BLACK
+        _label = [x['label'] for x in compare_overlap_queue]
+        
+        print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]                
+        final_group = []            
+        
+        for label_i in range( total_group_number ):
+        #for label in unique_label :
+            contour_image_each = image_resi.copy()
+            # darken the image to make the contour visible
+            contour_image_each[:] = contour_image_each[:]/3.0
+            COLOR = switchColor[ color_index % len(switchColor) ]
+            color_index += 1
+            tmp_group = []
+            for i in xrange( len(compare_overlap_queue) ):
+                if compare_overlap_queue[i]['label'] == label_i :
+                    tmp_group.append( compare_overlap_queue[i]['cnt_dic'] ) 
                    
-                    if diff > max_diff:
-                        if obvious_para == 'cover_area' and 0.5*final_group[i-1][obvious_para] < final_group[i][obvious_para] :
-                            continue
-            
-                        max_diff = diff
-                        obvious_index = i-1
-                   
-                print 'obvious_index:',obvious_index
-                
-                for i in range( obvious_index+1 ):
-                    if final_group[i]['obvious_weight'] == -1:
-                        obvious_index = i
-                        break
+            if len(tmp_group) < 1 :
+                continue                    
 
+            tmp_cnt_group = []
+            avg_color_gradient = 0.0
+            avg_shape_factor = 0.0
+            tmp_area = 0.0
+            
+            
+            
+            #for each final group count obvious factor
+            for cnt_dic in tmp_group:
+                cnt = cnt_dic['cnt']
+                cnt_area = cv2.contourArea(cnt)
+                tmp_area += cnt_area
+                avg_shape_factor += cnt_area/float(cv2.contourArea(cv2.convexHull(cnt)))
+                avg_color_gradient += cnt_dic['color_gradient']
+                tmp_cnt_group.append(cnt)
+            
+            avg_shape_factor /= float(len(tmp_group))
+            avg_color_gradient /= float(len(tmp_group))
+            avg_area = tmp_area / float(len(tmp_group))
+            
+            if len(tmp_cnt_group) < 2 :
+                continue
+            
+            
+            
+        
+            cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
+            cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
+            
+            
+            final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'group_dic':tmp_group } )
+            
+            contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
+                         
+        # end find final group for  
+        
+        if _showImg['original_result']:
+            cv2.imshow(fileName+' remove_overlap_combine_cnt', ShowResize(contour_image) )
+            cv2.waitKey(100)     
+        if _writeImg['original_result']:
+            cv2.imwrite( output_path + fileName[:-4] +'_g_remove_overlap_combine_cnt.jpg', contour_image )                
+     
+    # end _combine_two_edge_result_before_filter_obvious if 
+    #====================================================================================
+              
+    # line 637 - line 712 obviousity filter
+        obvious_list = ['cover_area','color_gradient','shape_factor']
+        #sort final cnt group by cover_area , shape_factor and color_gradient
+        for obvious_para in obvious_list:
+            
+            if obvious_para == 'color_gradient':
+                avg_img_gradient = Avg_Img_Gredient(image_resi)
+                final_group.append( { 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 } )
+               
+            final_group.sort( key = lambda x:x[obvious_para], reverse = True )
+            obvious_index = len(final_group)-1
+            max_diff = 0
+            area_list = [ final_group[0][obvious_para] ]
+            
+            if obvious_para == 'color_gradient' and final_group[0]['obvious_weight'] < 0 :
+                final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
+                print 'No color_gradient result'
+                continue
+                
+
+                
+            for i in range( 1, len( final_group ) ):
+                area_list.append(final_group[i][obvious_para])
+                diff = final_group[i-1][obvious_para] - final_group[i][obvious_para] 
+               
+                if diff > max_diff:
+                    if obvious_para == 'cover_area' and 0.5*final_group[i-1][obvious_para] < final_group[i][obvious_para] :
+                        continue
+        
+                    max_diff = diff
+                    obvious_index = i-1
+               
+            print 'obvious_index:',obvious_index
+            
+            for i in range( obvious_index+1 ):
+                if final_group[i]['obvious_weight'] == -1:
+                    obvious_index = i
+                    break
+
+                final_group[i]['obvious_weight'] += 1
+                cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, GREEN, 2 )
+                
+            for i in range( obvious_index+1, len(final_group) ):
+                COLOR = RED
+                if  obvious_para == 'shape_factor' and final_group[i]['shape_factor'] >= 0.8 :
+                    COLOR = GREEN
                     final_group[i]['obvious_weight'] += 1
-                    cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, GREEN, 2 )
-                    
-                for i in range( obvious_index+1, len(final_group) ):
-                    COLOR = RED
-                    if  obvious_para == 'shape_factor' and final_group[i]['shape_factor'] >= 0.8 :
-                        COLOR = GREEN
-                        final_group[i]['obvious_weight'] += 1
-                    cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, COLOR, 2 )  
-                    
-                    
-                if _showImg['each_obvious_result']:
-                    cv2.imshow(fileName+' obvious_para:['+obvious_para+'] | Green for obvious['+str(edge_type)+']', ShowResize(contour_image) )
-                    cv2.waitKey(100)     
-                if _writeImg['each_obvious_result']:
-                    cv2.imwrite( output_path + fileName[:-4] +'_h_para['+obvious_para+']_obvious(Green)['+str(edge_type)+'].jpg', contour_image )   
+                cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, COLOR, 2 )  
                 
-                plt.bar(left=range(len(area_list)),height=area_list)   
-                plt.title( obvious_para+' cut_point : '+str(obvious_index)+'  | value: '+str(final_group[obvious_index][obvious_para]) + '  |[' + str(edge_type) + ']' )
-                       
-                if _showImg['obvious_histogram']:
-                    plt.show()
-                if _writeImg['obvious_histogram']:
-                    plt.savefig(output_path+fileName[:-4]+'_h_para['+obvious_para+']_obvious_his['+str(edge_type)+'].png')    
-                plt.close()  
                 
-                if obvious_para == 'color_gradient':
-                    final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
-                
-            # end obvious para for
+            if _showImg['each_obvious_result']:
+                cv2.imshow(fileName+' obvious_para:['+obvious_para+'] | Green for obvious['+str(edge_type)+']', ShowResize(contour_image) )
+                cv2.waitKey(100)     
+            if _writeImg['each_obvious_result']:
+                cv2.imwrite( output_path + fileName[:-4] +'_h_para['+obvious_para+']_obvious(Green)['+str(edge_type)+'].jpg', contour_image )   
             
-            final_obvious_group = []
-           # "vote (0-3) " to decide which groups to remain           
-            final_group.sort( key = lambda x:x['obvious_weight'], reverse = True )
-            weight = final_group[0]['obvious_weight']
+            plt.bar(left=range(len(area_list)),height=area_list)   
+            plt.title( obvious_para+' cut_point : '+str(obvious_index)+'  | value: '+str(final_group[obvious_index][obvious_para]) + '  |[' + str(edge_type) + ']' )
+                   
+            if _showImg['obvious_histogram']:
+                plt.show()
+            if _writeImg['obvious_histogram']:
+                plt.savefig(output_path+fileName[:-4]+'_h_para['+obvious_para+']_obvious_his['+str(edge_type)+'].png')    
+            plt.close()  
             
-            for f_group in final_group :
-                      
-                # determine obvious if match more than two obvious condition 
-                if f_group['obvious_weight'] == weight:
-                    final_obvious_group.append(f_group)
-                                                                
-                        
-            # end choose obvious way if 
+            if obvious_para == 'color_gradient':
+                final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
             
-            # search other contour by previous found obvious contours
-            #-------------------------------------------------------------------------------------
-            
-            #final_obvious_group = Search_whole_Img_by_Obvious_Cnt( image_resi, final_obvious_group )
-           
-            #-------------------------------------------------------------------------------------
-           
-            final_differ_edge_group = final_obvious_group
-           
+        # end obvious para for
+        
+        final_obvious_group = []
+       # "vote (0-3) " to decide which groups to remain           
+        final_group.sort( key = lambda x:x['obvious_weight'], reverse = True )
+        weight = final_group[0]['obvious_weight']
+        
+        for f_group in final_group :
+                  
+            # determine obvious if match more than two obvious condition 
+            if f_group['obvious_weight'] == weight:
+                final_obvious_group.append(f_group)
+                                                            
+                    
+        # end choose obvious way if 
+        
+        # search other contour by previous found obvious contours
+        #-------------------------------------------------------------------------------------
+        
+        #final_obvious_group = Search_whole_Img_by_Obvious_Cnt( image_resi, final_obvious_group )
+       
+        #-------------------------------------------------------------------------------------
+       
+        final_differ_edge_group = final_obvious_group
+       
         #end scale for
         
         final_nonoverlap_cnt_group = []
@@ -660,8 +655,6 @@ def main():
             for cnt_dic in cnt_group:
                 compare_overlap_queue.append( { 'cnt':cnt_dic['cnt'], 'label':group_index, 'group_weight':len(cnt_group), 'color':cnt_dic['color']  } )
         
-        if not _combine_two_edge_result_before_filter_obvious :
-            compare_overlap_queue = CheckOverlap( compare_overlap_queue, keep = 'group_weight' )
        
         for label_i in range( total_group_number ) :
             tmp_group = []
