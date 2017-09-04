@@ -54,10 +54,10 @@ _combine_two_edge_result_before_filter_obvious = True
 _evaluate = False
 
 
-input_path = './input/image/'
+input_path = '../../input/image/'
 # structure forest output
-edge_input_path = './input/edge_image/'
-output_path = './output/'
+edge_input_path = '../../input/edge_image/'
+output_path = '../../output/'
 
 csv_output = '../../output_csv_6_8[combine_result_before_filter_obvious]/'
 evaluate_csv_path = '../../evaluate_data/groundtruth_csv/¤@¯ë¤Æcsv/' 
@@ -69,8 +69,7 @@ _writeImg = { 'original_image':False, 'original_edge':False, 'enhanced_edge':Fal
 
 _show_resize = [ ( 720, 'height' ), ( 1200, 'width' ) ][0]
 
-test_one_img = { 'test':True , 'filename': 'IMG_ (34).jpg' }
-#test_one_img = { 'test':True , 'filename': '14_84.png' }
+test_one_img = { 'test':True , 'filename': 'IMG_ (66).jpg' }
 
 def main():
     
@@ -145,8 +144,7 @@ def main():
                 edge_image_ori = cv2.imread( edge_input_path + fileName[:-4] + '_edge.jpg' , cv2.IMREAD_GRAYSCALE ) 
                 height, width = edge_image_ori.shape[:2]
                 edged = cv2.resize( edge_image_ori, (0,0), fx= resize_height/height, fy= resize_height/height)                          
-                #thresh_gray,edged = cv2.threshold(edge_image_resi,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)   
-                
+           
             else:
                 edge_type = 'canny'
               
@@ -188,8 +186,7 @@ def main():
                         for chan in _edge_by_channel:
                             if channel_thre_dic[chan] > 20 :
                                 edged[ r_l : r_r , c_l : c_r ] = edged[ r_l : r_r , c_l : c_r ] | cv2.Canny( channel_img_dic[chan], 0.5*channel_thre_dic[chan], channel_thre_dic[chan] )
-                #image_resi = cv2.resize( image_resi, (0,0), fx= 1.0/scale, fy= 1.0/scale)
-                                            
+                              
             # end detect edge else  
     
             if _showImg['original_edge']:
@@ -276,11 +273,7 @@ def main():
                 if cnt_area < 60 :
                     small_cnt_cover_area += cnt_area
                     small_cnt_count += 1
-                
-            #print 'cover rate:',small_cnt_cover_area / float(re_height*re_width),small_cnt_cover_area , float(re_height*re_width)
-            #print 'threshold:',small_filter_threshold
-            #if small_cnt_cover_area / float(re_height*re_width) > small_filter_threshold :
-            
+                    
             # normal pic for small noise more than 500
             if small_cnt_count > 500:
                 cnt_min_size = 60
@@ -301,7 +294,6 @@ def main():
                 
                 if _checkConvex :
                     # remove contour which is not Convex hull
-                    #print 'Check convexhull'
                     if not cv2.isContourConvex(np.array(c)):
                         contour_image = np.zeros( image_resi.shape, np.uint8 )
                         cv2.drawContours( contour_image, [c], -1, GREEN, 1 ) 
@@ -318,20 +310,15 @@ def main():
                         continue
                     solidity =  area / cv2.contourArea(cv2.convexHull(c)) 
                     if area < 4 or solidity < 0.5 :
-                    #if area < 4 or ( len(c) > 30 and float(len(c)) / area > 0.5 ) or ( len(c) <= 30 and float(len(c)) / area > 0.75 ): 
-                    #if area < 4 or shape_factor < 0.1 :
+                 
                         noise+=1
                         continue
                 
                 if _remove_too_many_edge :
                     # remove contour which has too many edge
-                    #print 'Remove contour with too many edges '
                     peri = cv2.arcLength(c, True)
                     approx = cv2.approxPolyDP(c, 10, True)
-                    #contour_image = np.zeros( image_resi.shape, np.uint8 )
-                    #cv2.drawContours( contour_image, [c], -1, GREEN, 1 )
-                    #cv2.imshow('edge number : '+str(len(approx)), ShowResize(contour_image))
-                    #cv2.waitKey(100)
+                
                     if len(approx) > 50 : 
                         continue
    
@@ -341,10 +328,7 @@ def main():
             contour_dic_list = []
             for cnt in contour_list:
                 contour_dic_list.append( {'cnt':cnt} )
-            # remove outer contour of two overlapping contours whose sizes are close          
-            if _check_overlap :     
-                print 'Remove overlap contour keep inner ones'
-                contour_dic_list = CheckOverlap(contour_dic_list)
+        
             
             contour_list = []
             for cnt_dic in contour_dic_list:
@@ -364,14 +348,7 @@ def main():
                 COLOR = switchColor[ color_index % len(switchColor) ]     
                 color_index += 1
                 cv2.drawContours( contour_image, [c], -1, COLOR, 2 )
-                #cv2.drawContours( gradient_img_copy, [c], -1, COLOR, 1 )
             
-            #combine_image = np.concatenate( (gradient_img, gradient_img_copy), axis = 1)
-            
-            #cv2.imwrite( './gradient.jpg',combine_image)            
-            #cv2.imshow( 'gradient',combine_image)
-            #cv2.waitKey(100)
-    
             if _showImg['contour_filtered']:
                 cv2.imshow( fileName + ' contour_filtered['+str(edge_type)+']', ShowResize(contour_image) )
                 cv2.waitKey(100)
@@ -468,7 +445,6 @@ def main():
                     if combine_label_list[i] == label :
                         tmp_group.append( cnt_dic_list[i] ) 
                 
-                #tmp_group = CheckOverlap(tmp_group)
                 tmp_cnt_group = []
                 avg_color_gradient = 0.0
                 avg_shape_factor = 0.0
@@ -481,10 +457,7 @@ def main():
                     cnt_area = cv2.contourArea(cnt)
                     tmp_area += cnt_area
                     avg_shape_factor += (4*np.pi*cnt_area)/float(pow(len(cnt),2))
-                    #print cnt_dic['color_gradient'],Eucl_distance(img_lab,cnt_dic['color']),max( cnt_dic['color_gradient'], Eucl_distance(img_lab,cnt_dic['color']))
-                    #avg_color_gradient += max( cnt_dic['color_gradient'], Eucl_distance(img_lab,cnt_dic['color']))
                     avg_color_gradient += cnt_dic['color_gradient']
-                    #avg_color_gradient += Eucl_distance(img_lab,cnt_dic['color'])
                     tmp_cnt_group.append(cnt)
                 
                 avg_shape_factor /= float(len(tmp_group))
@@ -493,21 +466,13 @@ def main():
                 if len(tmp_cnt_group) < 2 :
                     continue
                 
-                #if label == max_label :                  
-                    #cv2.drawContours( contour_image_max, np.array(tmp_cnt_group), -1, RED, 2 )
-                #else:
-                    #cv2.drawContours( contour_image_max, np.array(tmp_cnt_group), -1, GREEN, 1 ) 
-            
                 cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
                 cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
                 
-                #print 'color_gradient:',avg_color_gradient
                 final_group.append( { 'cnt':tmp_cnt_group, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'combine_weight':0.0, 'group_dic':tmp_group } )
                 
                 contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
-                #print 'shape_factor:',avg_shape_factor
-                #cv2.imshow(fileName+' shape_factor['+str(avg_shape_factor)+']', ShowResize(contour_image_each) )
-                #cv2.waitKey(100)                
+                                
             # end find final group for
             # sort the group from the max area to min group and get max count
            
@@ -522,17 +487,6 @@ def main():
                 continue
         
             #====================================================================================
-            
-            #img_lab = [0.0,0.0,0.0]
-            #lab = cv2.cvtColor( image_resi, cv2.COLOR_BGR2LAB)
-            #for tmp_h in range( re_height ): 
-                #for tmp_w in range( re_width ):
-                    #img_lab[0] += lab[tmp_h,tmp_w][0]
-                    #img_lab[1] += lab[tmp_h,tmp_w][1]
-                    #img_lab[2] += lab[tmp_h,tmp_w][2]      
-            #img_lab[0] /= float(re_height*re_width)
-            #img_lab[1] /= float(re_height*re_width)
-            #img_lab[2] /= float(re_height*re_width)                    
             
             # line 536 - line 632 combine two edge detection results
             if _combine_two_edge_result_before_filter_obvious :
@@ -573,11 +527,9 @@ def main():
                     color_index += 1
                     tmp_group = []
                     for i in xrange( len(compare_overlap_queue) ):
-                        #print 'compare_overlap_queue , label_i : ', compare_overlap_queue[i]['label'] , label_i
                         if compare_overlap_queue[i]['label'] == label_i :
                             tmp_group.append( compare_overlap_queue[i]['cnt_dic'] ) 
-                            #cv2.drawContours( contour_image, np.array([compare_overlap_queue[i]['cnt']]), -1, GREEN, 2 )
-                    
+                           
                     if len(tmp_group) < 1 :
                         continue                    
 
@@ -593,9 +545,7 @@ def main():
                         cnt = cnt_dic['cnt']
                         cnt_area = cv2.contourArea(cnt)
                         tmp_area += cnt_area
-                        #avg_shape_factor += (4*np.pi*cnt_area)/float(pow(len(cnt),2))
                         avg_shape_factor += cnt_area/float(cv2.contourArea(cv2.convexHull(cnt)))
-                        #avg_color_gradient += max( cnt_dic['color_gradient'], Eucl_distance(img_lab,cnt_dic['color']))
                         avg_color_gradient += cnt_dic['color_gradient']
                         tmp_cnt_group.append(cnt)
                     
@@ -608,10 +558,6 @@ def main():
                     
                     
                     
-                    #if label == max_label :                  
-                        #cv2.drawContours( contour_image_max, np.array(tmp_cnt_group), -1, RED, 2 )
-                    #else:
-                        #cv2.drawContours( contour_image_max, np.array(tmp_cnt_group), -1, GREEN, 1 ) 
                 
                     cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
                     cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
@@ -620,9 +566,7 @@ def main():
                     final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'combine_weight':0.0, 'group_dic':tmp_group } )
                     
                     contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
-                    #print 'shape_factor:',avg_shape_factor
-                    #cv2.imshow(fileName+' shape_factor['+str(label_i)+']', ShowResize(contour_image_each) )
-                    #cv2.waitKey(100)                
+                                 
                 # end find final group for  
                 
                 if _showImg['original_result']:
@@ -633,9 +577,7 @@ def main():
              
             # end _combine_two_edge_result_before_filter_obvious if 
             #====================================================================================
-            
-            #print "@@ len(final_group):",len(final_group)
-            
+                      
             # line 637 - line 712 obviousity filter
             obvious_list = ['cover_area','color_gradient','shape_factor']
             #sort final cnt group by cover_area , shape_factor and color_gradient
@@ -644,8 +586,7 @@ def main():
                 if obvious_para == 'color_gradient':
                     avg_img_gradient = Avg_Img_Gredient(image_resi)
                     final_group.append( { 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1, 'combine_weight':-1 } )
-                    #print 'avg_img_gradient:',avg_img_gradient
-                    
+                   
                 final_group.sort( key = lambda x:x[obvious_para], reverse = True )
                 obvious_index = len(final_group)-1
                 max_diff = 0
@@ -661,21 +602,17 @@ def main():
                 for i in range( 1, len( final_group ) ):
                     area_list.append(final_group[i][obvious_para])
                     diff = final_group[i-1][obvious_para] - final_group[i][obvious_para] 
-                    #diff = float(final_group[i-1][obvious_para]) / sum([x[obvious_para] for x in final_group[i:]])
                     if final_group[i]['combine_weight'] != -1 :
                         final_group[i]['combine_weight'] += final_group[i][obvious_para]/float(final_group[0][obvious_para])
                     
                     if diff > max_diff:
-                    #if 0.8*final_group[i-1][obvious_para] > final_group[i][obvious_para] and diff > max_diff:
                         if obvious_para == 'cover_area' and 0.5*final_group[i-1][obvious_para] < final_group[i][obvious_para] :
                             continue
             
                         max_diff = diff
                         obvious_index = i-1
                    
-                #print obvious_para,'_list:',area_list
                 print 'obvious_index:',obvious_index
-                #contour_image[:] = BLACK
                 
                 for i in range( obvious_index+1 ):
                     if final_group[i]['obvious_weight'] == -1:
@@ -684,8 +621,6 @@ def main():
 
                     final_group[i]['obvious_weight'] += 1
                     cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, GREEN, 2 )
-                    #cv2.imshow('fish:'+str(final_group[i]['obvious_weight']), contour_image)
-                    #cv2.waitKey(0)    
                     
                 for i in range( obvious_index+1, len(final_group) ):
                     COLOR = RED
@@ -759,10 +694,7 @@ def main():
             else:
                 
                 final_group.sort( key = lambda x:x['obvious_weight'], reverse = True )
-                #if final_group[0]['obvious_weight'] == 3:
-                    #weight = 3
                 weight = final_group[0]['obvious_weight']
-                #print 'weight:',weight
                 
                 for f_group in final_group :
                           
@@ -867,16 +799,7 @@ def main():
             final_nonoverlap_cnt_group.append({ 'cnt':tmp_group, 'edge_number':avg_edge_number, 'color':avg_color, 'size':avg_size,'count':count })
             
         # end each label make group for
-        
-        #final_nonoverlap_cnt_group = CheckOverlap(final_nonoverlap_cnt_group)
-       
-        #contour_image[:] = BLACK
-        #for cnt in final_nonoverlap_cnt_group:
-            #cnt = cnt['cnt']
-            #cv2.drawContours( contour_image, np.array(cnt), -1, GREEN, 2 )
-        #cv2.imshow('cnt', contour_image)
-        #cv2.waitKey(0)         
-        
+                
         # draw final result
         final_group_cnt = []
         contour_image = image_resi.copy()
@@ -910,7 +833,6 @@ def main():
         if _evaluate:
             resize_ratio = resize_height/float(height)
             tp, fp, fn, pr, re, fm, er = Evaluate_detection_performance( image_resi, fileName, final_group_cnt, resize_ratio, evaluate_csv_path )
-            #evaluation_csv = [['Image name','TP','FP','FN','Precision','Recall','F_measure','Error_rate']]
             evaluation_csv.append( [ fileName, tp, fp, fn, pr, re, fm, er ])
             
             
@@ -972,14 +894,7 @@ def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio
     groundtruth_count = len(groundtruth_list)
     program_count = len(cnt_area_coordinate)
     
-    #blank_img = img.copy()
-    #blank_img[:] = blank_img[:]/3.0
-    #for g_dic in groundtruth_list:
-        #cv2.circle(blank_img,(int(g_dic['X']),int(g_dic['Y'])),2,(0,0,255),2)
    
-    #print groundtruth_list[-1]['Y'], groundtruth_list[-1]['X']
-    #print cnt_area_coordinate[-1][0]
-    
     for g_dic in groundtruth_list:
         for cnt in cnt_area_coordinate:
             if [g_dic['Y'],g_dic['X']] in cnt :
@@ -1020,8 +935,7 @@ def Get_Cnt_Area_Coordinate( img, final_group_cnt ):
 def Search_whole_Img_by_Obvious_Cnt( image_resi, obvious_cnt_group_list ):
     
     
-    #cv2.imshow('search',image_resi)
-    #cv2.waitKey(100)
+
     #detect edge by dynamical threshold    
     gray = cv2.cvtColor( image_resi, cv2.COLOR_BGR2GRAY )
 
