@@ -38,17 +38,14 @@ gaussian_para = 3
 small_filter_threshold = (500*30) / float(736*736)
 
 _sharpen = True
-_check_overlap = False
 _remove_small_and_big = True
 _remove_high_density = True
 _remove_too_many_edge = True
-_checkConvex = False
 _gaussian_filter = True
 _use_structure_edge = True
 _enhance_edge = True
 _gray_value_redistribution_local = True
 _record_by_csv = False
-_use_comebine_weight = False
 #check if combine the ouput before the obviousity filter
 _combine_two_edge_result_before_filter_obvious = True
 _evaluate = False
@@ -291,16 +288,7 @@ def main():
                     # contour perimeter less than 1/3 image perimeter 
                     if len(c) < cnt_min_size or len(c) > (re_height+re_width)*2/3.0: 
                         continue        
-                
-                if _checkConvex :
-                    # remove contour which is not Convex hull
-                    if not cv2.isContourConvex(np.array(c)):
-                        contour_image = np.zeros( image_resi.shape, np.uint8 )
-                        cv2.drawContours( contour_image, [c], -1, GREEN, 1 ) 
-                        cv2.imshow( fileName + ' countour', ShowResize(contour_image) )
-                        cv2.waitKey(100)                          
-                        continue
-                
+                             
                 if _remove_high_density :
                     # remove contour whose density is too large or like a line
                     #print 'Remove contour with high density'
@@ -339,7 +327,7 @@ def main():
             
             print '------------------------'
                        
-            #
+            
             # draw contour by different color
             contour_image = np.zeros( image_resi.shape, np.uint8 )
             contour_image[:] = BLACK
@@ -433,7 +421,7 @@ def main():
             contour_image_max[:] = BLACK 
             
            
-            color_index = 0             
+            color_index = 0   
             for label in unique_label :
                 contour_image_each = image_resi.copy()
                 # darken the image to make the contour visible
@@ -444,6 +432,7 @@ def main():
                 for i in xrange( cnt_N ):
                     if combine_label_list[i] == label :
                         tmp_group.append( cnt_dic_list[i] ) 
+                
                 
                 tmp_cnt_group = []
                 avg_color_gradient = 0.0
@@ -602,9 +591,7 @@ def main():
                 for i in range( 1, len( final_group ) ):
                     area_list.append(final_group[i][obvious_para])
                     diff = final_group[i-1][obvious_para] - final_group[i][obvious_para] 
-                    if final_group[i]['combine_weight'] != -1 :
-                        final_group[i]['combine_weight'] += final_group[i][obvious_para]/float(final_group[0][obvious_para])
-                    
+                   
                     if diff > max_diff:
                         if obvious_para == 'cover_area' and 0.5*final_group[i-1][obvious_para] < final_group[i][obvious_para] :
                             continue
@@ -651,56 +638,15 @@ def main():
             # end obvious para for
             
             final_obvious_group = []
-            # "take the sum of 3 obviousity attribute" to decide which  groups to remain 
-            if _use_comebine_weight :
-                final_group.sort( key = lambda x:x['combine_weight'], reverse = True )
-                obvious_index = len(final_group)-1
-                max_diff = 0
-                area_list = [ final_group[0]['combine_weight'] ]
-                
-                for i in range( 1, len( final_group ) ):
-                    area_list.append(final_group[i]['combine_weight'])
-                    diff = final_group[i-1]['combine_weight'] - final_group[i]['combine_weight']
-                    
-                    if final_group[i-1]['combine_weight'] > final_group[i]['combine_weight'] and diff > max_diff:
-                        max_diff = diff
-                        obvious_index = i-1
-                   
-                print obvious_para,'_list:',area_list  
-                
-                for i in range(obvious_index+1):
-                    final_obvious_group.append(final_group[i])
-                    cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, GREEN, 2 )
-                for i in range(obvious_index+1,len(final_group)):
-                    cv2.drawContours( contour_image, np.array(final_group[i]['cnt']), -1, RED, 2 )  
-                    
-               
-                if _showImg['combine_obvious_result']:
-                    cv2.imshow(fileName+' combine_obvious_result | Green for obvious', ShowResize(contour_image) )
-                    cv2.waitKey(100)     
-                if _writeImg['combine_obvious_result']:
-                    cv2.imwrite( output_path + fileName[:-4] +'_combine_obvious_result(Green).jpg', contour_image )   
-                
-                plt.bar(left=range(len(area_list)),height=area_list)   
-                plt.title( 'combine_obvious_result cut_point : '+str(obvious_index)+'  | value: '+str(final_group[obvious_index][obvious_para]) )
-                       
-                if _showImg['obvious_histogram']:
-                    plt.show()
-                if _writeImg['obvious_histogram']:
-                    plt.savefig(output_path+fileName[:-4]+'_combine_obvious_result_his.png')    
-                plt.close()                  
-                
-            # "vote (0-3) " to decide which groups to remain
-            else:
-                
-                final_group.sort( key = lambda x:x['obvious_weight'], reverse = True )
-                weight = final_group[0]['obvious_weight']
-                
-                for f_group in final_group :
-                          
-                    # determine obvious if match more than two obvious condition 
-                    if f_group['obvious_weight'] == weight:
-                        final_obvious_group.append(f_group)
+           # "vote (0-3) " to decide which groups to remain           
+            final_group.sort( key = lambda x:x['obvious_weight'], reverse = True )
+            weight = final_group[0]['obvious_weight']
+            
+            for f_group in final_group :
+                      
+                # determine obvious if match more than two obvious condition 
+                if f_group['obvious_weight'] == weight:
+                    final_obvious_group.append(f_group)
                                                                 
                         
             # end choose obvious way if 
@@ -711,47 +657,8 @@ def main():
             #final_obvious_group = Search_whole_Img_by_Obvious_Cnt( image_resi, final_obvious_group )
            
             #-------------------------------------------------------------------------------------
-            if not _combine_two_edge_result_before_filter_obvious :
-                
-                contour_image = image_resi.copy()
-                contour_image[:] = contour_image[:]/3.0
-                for tmp_group in final_obvious_group:
-                    tmp_group = tmp_group['cnt']
-                    
-                    if len(tmp_group) < 2 :
-                        continue
-                    
-                    
-                    contour_image_each = image_resi.copy()
-                    # darken the image to make the contour visible
-                    contour_image_each[:] = contour_image_each[:]/3.0                
-                    COLOR = switchColor[ color_index % len(switchColor) ]
-                    color_index += 1                
-                    cv2.drawContours( contour_image, np.array(tmp_group), -1, COLOR, 2 )
-                    cv2.drawContours( contour_image_each, np.array(tmp_group), -1, COLOR, 2 )
-        
-                    if _showImg['each_group_result']:            
-                            cv2.imshow(fileName+' each_group_result_label['+str(color_index)+']_Count['+str(len(tmp_group))+']_['+str(edge_type)+']', ShowResize(contour_image_each) )
-                            cv2.waitKey(100)     
-                    if _writeImg['each_group_result']:
-                            cv2.imwrite( output_path + fileName[:-4] +'_i_label['+str(color_index)+']_Count['+str(len(tmp_group))+']_['+str(edge_type)+'].jpg', contour_image_each )  
-        
-        
-                contour_image = cv2.resize( contour_image, (0,0), fx = height/resize_height, fy = height/resize_height)
-                combine_image = np.concatenate((color_image_ori, contour_image), axis=1) 
-        
-                if _showImg['result_obvious']:
-                    cv2.imshow(fileName+' result_obvious['+str(edge_type)+']', ShowResize(combine_image) )
-                    cv2.waitKey(100)     
-                if _writeImg['result_obvious']:
-                    cv2.imwrite( output_path + fileName[:-4] +'_j_result_obvious['+str(edge_type)+'].jpg', combine_image )            
-    
-    
-                for f_group in final_obvious_group :
-                    final_differ_edge_group.append(f_group)
-                            
-            else:
-                final_differ_edge_group = final_obvious_group
+           
+            final_differ_edge_group = final_obvious_group
            
         #end scale for
         
@@ -835,11 +742,7 @@ def main():
             tp, fp, fn, pr, re, fm, er = Evaluate_detection_performance( image_resi, fileName, final_group_cnt, resize_ratio, evaluate_csv_path )
             evaluation_csv.append( [ fileName, tp, fp, fn, pr, re, fm, er ])
             
-            
-        
-        if _record_by_csv:
-            Record_by_CSV( fileName, final_group_cnt, contour_image )
-
+       
         contour_image = cv2.resize( contour_image, (0,0), fx = height/resize_height, fy = height/resize_height)
         combine_image = np.concatenate((color_image_ori, contour_image), axis=1) 
 
