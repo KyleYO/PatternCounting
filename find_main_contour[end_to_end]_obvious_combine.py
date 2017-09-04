@@ -432,25 +432,13 @@ def main():
                 for i in xrange( cnt_N ):
                     if combine_label_list[i] == label :
                         tmp_group.append( cnt_dic_list[i] ) 
-                
-                
+               
                 tmp_cnt_group = []
-                avg_color_gradient = 0.0
-                avg_shape_factor = 0.0
-                tmp_area = 0.0
-                
-                
+
                 #for each final group count obvious factor
                 for cnt_dic in tmp_group:
                     cnt = cnt_dic['cnt']
-                    cnt_area = cv2.contourArea(cnt)
-                    tmp_area += cnt_area
-                    avg_shape_factor += (4*np.pi*cnt_area)/float(pow(len(cnt),2))
-                    avg_color_gradient += cnt_dic['color_gradient']
                     tmp_cnt_group.append(cnt)
-                
-                avg_shape_factor /= float(len(tmp_group))
-                avg_color_gradient /= float(len(tmp_group))
                 
                 if len(tmp_cnt_group) < 2 :
                     continue
@@ -458,7 +446,7 @@ def main():
                 cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
                 cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
                 
-                final_group.append( { 'cnt':tmp_cnt_group, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'combine_weight':0.0, 'group_dic':tmp_group } )
+                final_group.append( { 'cnt':tmp_cnt_group,'obvious_weight':0, 'group_dic':tmp_group } )
                 
                 contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
                                 
@@ -552,7 +540,7 @@ def main():
                     cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
                     
                     
-                    final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'combine_weight':0.0, 'group_dic':tmp_group } )
+                    final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'group_dic':tmp_group } )
                     
                     contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
                                  
@@ -574,19 +562,19 @@ def main():
                 
                 if obvious_para == 'color_gradient':
                     avg_img_gradient = Avg_Img_Gredient(image_resi)
-                    final_group.append( { 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1, 'combine_weight':-1 } )
+                    final_group.append( { 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 } )
                    
                 final_group.sort( key = lambda x:x[obvious_para], reverse = True )
                 obvious_index = len(final_group)-1
                 max_diff = 0
                 area_list = [ final_group[0][obvious_para] ]
                 
-                if final_group[0]['combine_weight'] < 0 :
-                    final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1, 'combine_weight':-1 })
+                if obvious_para == 'color_gradient' and final_group[0]['obvious_weight'] < 0 :
+                    final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
                     print 'No color_gradient result'
                     continue
                     
-                final_group[0]['combine_weight'] += 1.0
+    
                     
                 for i in range( 1, len( final_group ) ):
                     area_list.append(final_group[i][obvious_para])
@@ -633,7 +621,7 @@ def main():
                 plt.close()  
                 
                 if obvious_para == 'color_gradient':
-                    final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1, 'combine_weight':-1 })
+                    final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
                 
             # end obvious para for
             
