@@ -245,6 +245,7 @@ def main():
             tmp_cnt = contours[0]
             # check isOverlap
             # Since if is overlap , the order of the overlapped contours will be continuous 
+            # The following four lines the goal is as same as CheckOverlap(.., 'keep inner') and much more easier.
             for c in contours[1:]:
                 if not IsOverlap(tmp_cnt,c):
                     tmp_cnt_list.append(c)
@@ -757,13 +758,24 @@ def main():
         
 
 def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio, evaluate_csv_path ):
+    '''
+    Evaluation during run time.
+    The evaluation is about if the contours are 
+    detected correctly.
+    The results are compared with the groundtruth.
+    
+    @param
+    evaluate_csv_path : read the groundtruth data
+    '''
 
     tp = 0
     fp = 0
     fn = 0 
     pr = 0.0
     re = 0.0
+    # Mix the pr and re 
     fm = 0.0
+    # Only compare the count
     er = 0.0
     groundtruth_list = []
     with open(evaluate_csv_path+fileName+'.csv') as csvfile:
@@ -801,6 +813,11 @@ def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio
     return tp, fp, fn, pr, re, fm, er
 
 def Get_Cnt_Area_Coordinate( img, final_group_cnt ):
+    '''
+    Take the contour list (in order) as input , 
+    output all the points within the contour.
+    In order to check if a point is contained in the contour.
+    '''
     
     cnt_area_coordinate = []
     blank_img = np.zeros(img.shape[:2], np.uint8)
@@ -815,144 +832,16 @@ def Get_Cnt_Area_Coordinate( img, final_group_cnt ):
             cnt_area_coordinate.append( (np.argwhere(blank_img==255)).tolist() )
     
     return cnt_area_coordinate
-
-def Search_whole_Img_by_Obvious_Cnt( image_resi, obvious_cnt_group_list ):
-    
-    
-
-    #detect edge by dynamical threshold    
-    gray = cv2.cvtColor( image_resi, cv2.COLOR_BGR2GRAY )
-
-    thresh, binary = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    print 'thresh:',thresh
-    
-    match_cnt_group_list = []
-    
-    for obvious_cnt_group in obvious_cnt_group_list:
-        
-        obvious_cnt_group = obvious_cnt_group['group_dic']
-        # use color, size and shape to match
-        # find three avg parameter feature set to be a matching module
-        avg_color = [0.0]*len(obvious_cnt_group[0]['color'])
-        avg_shape = [0.0]*len(obvious_cnt_group[0]['shape'])
-        avg_size = [0.0]*len(obvious_cnt_group[0]['size'])
-        print 'find matching module'
-        for obvious_cnt in obvious_cnt_group:
-            
-            for i in range( len(obvious_cnt['color']) ):
-                avg_color[i] += obvious_cnt['color'][i]
-            for i in range( len(obvious_cnt['shape']) ):
-                avg_shape[i] += obvious_cnt['shape'][i]                
-            for i in range( len(obvious_cnt['size']) ):
-                avg_size[i] += cv2.contourArea(obvious_cnt['cnt'])       
-           
-        cnt_number = len(obvious_cnt_group)   
-        
-        for i in range( len(obvious_cnt['color']) ):
-            avg_color[i] /= cnt_number
-        for i in range( len(obvious_cnt['shape']) ):
-            avg_shape[i] /= cnt_number        
-        for i in range( len(obvious_cnt['size']) ):
-            avg_size[i] /= cnt_number  
-            
-        matching_module = { 'cnt':[], 'shape':avg_shape, 'color':avg_color, 'size':avg_size }
-        
-        # find the most different cnt from matching module as bounding module  
-        max_color_dis = 0.0
-        max_shape_dis = 0.0
-        max_size_dis = 0.0
-        print 'find bounding module'
-        for obvious_cnt in obvious_cnt_group:
-            color_dis = Eucl_distance( obvious_cnt['color'], matching_module['color'] )
-            shape_dis = Eucl_distance( obvious_cnt['shape'], matching_module['shape'] )
-            size_dis = Eucl_distance( cv2.contourArea(obvious_cnt['cnt']), matching_module['size'] )
-            if color_dis > max_color_dis:
-                max_color_dis = color_dis
-            if shape_dis > max_shape_dis:
-                max_shape_dis = shape_dis                
-            if size_dis > max_size_dis:
-                max_size_dis = size_dis       
-        
-        bounding_dis = { 'shape':0.0, 'color':0.0, 'size':0.0, 'combine':0.0 }
-        bounding_module = {}
-        for obvious_cnt in obvious_cnt_group:
-            color_dis = Eucl_distance( obvious_cnt['color'], matching_module['color'] ) 
-            shape_dis = Eucl_distance( obvious_cnt['shape'], matching_module['shape'] ) 
-            size_dis = Eucl_distance( cv2.contourArea(obvious_cnt['cnt']), matching_module['size'] )  
-            tmp_dis = color_dis/float(max_color_dis) + shape_dis/float(max_shape_dis) + size_dis/float(max_size_dis)
-            if tmp_dis > bounding_dis['combine'] :
-                bounding_dis['combine'] = tmp_dis
-                bounding_dis['shape'] = shape_dis
-                bounding_dis['color'] = color_dis
-                bounding_dis['size'] = size_dis                                   
-                bounding_module = obvious_cnt
-                
-                
-        
-        
-        match_dic_list = []
-        for thre in np.arange( thresh, thresh+1, thresh  ):
-            
-            print 'thre:',thre
-            edge = cv2.Canny( gray.copy(),0.5*thre,thre )          
-            contour_list = cv2.findContours(edge,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)[-2]             
-
-            c_img = image_resi.copy()
-            c_img[:] = c_img[:]/3.0
-            cv2.drawContours( c_img, contour_list, -1, GREEN, 1 )        
-            for i in range( len(contour_list) ):
-                area = cv2.contourArea(contour_list[i]) 
-                shape_factor = 4*np.pi*area / float( pow(len(contour_list[i]), 2 ) )
-                if shape_factor < 0.5:
-                    contour_list[i] = cv2.convexHull(contour_list[i])
-            cv2.drawContours( c_img, contour_list, -1, RED, 1 ) 
-            cv2.imshow('img convexhul',c_img)
-            cv2.waitKey(100)
-            print 'extract feature'
-            c_list, cnt_shape_list, cnt_color_list, cnt_size_list, cnt_color_gradient_list = get_contour_feature.extract_feature( image_resi, contour_list )
-            
-            cnt_dic_list = []
-            for i in range( len(c_list) ):
-                cnt_dic_list.append( { 'cnt':c_list[i], 'shape':cnt_shape_list[i], 'color':cnt_color_list[i], 'size':cnt_size_list[i], 'color_gradient':cnt_color_gradient_list[i] } )            
-            print 'matching'    
-            # matching
-            for cnt_dic in cnt_dic_list:
-                if Eucl_distance( cnt_dic['shape'], matching_module['shape'] ) <= bounding_dis['shape']*1.5 and Eucl_distance( cv2.contourArea(cnt_dic['cnt']), matching_module['size'] ) <= bounding_dis['size']*1.5 : 
-                #if Eucl_distance( cnt_dic['shape'], matching_module['shape'] ) <= bounding_dis['shape']*1.5 or Eucl_distance( cnt_dic['color'], matching_module['color'] ) <= bounding_dis['color']*1.5 or Eucl_distance( cnt_dic['size'], matching_module['size'] ) <= bounding_dis['size']*1.5 : 
-                    print 'shape: ',Eucl_distance( cnt_dic['shape'], matching_module['shape'] ), bounding_dis['shape']
-                    print 'color: ',Eucl_distance( cnt_dic['color'], matching_module['color'] ) , bounding_dis['color'],cnt_dic['color'], matching_module['color']
-                    print 'size:',Eucl_distance( cv2.contourArea(cnt_dic['cnt']), matching_module['size'] ) , bounding_dis['size'],cv2.contourArea(cnt_dic['cnt']),matching_module['size']
-                    print '----------------------------------------------------------------------------------------------'
-                    match_dic_list.append(cnt_dic)
-                    
-        # end dynamical edge threshold for 
-         
-        contour_image_obvious = image_resi.copy()
-        contour_image_obvious[:] = contour_image_obvious[:]/3.0
-        print 'draw'
-        for obvious_cnt in obvious_cnt_group:
-            cv2.drawContours( contour_image_obvious, [obvious_cnt['cnt']], -1, GREEN, 2 )
-        
-        contour_image_match = image_resi.copy()
-        contour_image_match[:] = contour_image_match[:]/3.0        
-        color_index = 0
-        for match_cnt in match_dic_list:
-            color_index = (color_index+1) % len(switchColor)
-            COLOR = switchColor[color_index]
-            cv2.drawContours( contour_image_match, [match_cnt['cnt']], -1, COLOR, 1 )        
-        
-        combine_image = np.concatenate( (image_resi,contour_image_obvious),axis=1 ) 
-        combine_image = np.concatenate( (combine_image,contour_image_match),axis=1 ) 
-        
-        cv2.imshow('find match cnt',combine_image)
-        cv2.waitKey(100)
-        
-        match_cnt_group_list.append( match_dic_list )
-    
-    # end obvious cnt group for
-    return match_cnt_group_list
     
 def Avg_Img_Gredient( img, model = 'lab' ):
+    '''
+    Count the average gardient of the whole image, in order to compare with
+    the color gradient obviousity.
+    There are two uses of the 'avg_gradient'.
+    1. Avoid that the image are only two color gradients, one of them will be deleted , even if they are close.
+    2. If all the color gradient are less than the avg_gradient, all of them will be discarded 
+       since they are not obvious enough.
+    '''
     
     kernel = np.array( [[-1,-1,-1],
                         [-1, 8,-1],
@@ -982,27 +871,6 @@ def Avg_Img_Gredient( img, model = 'lab' ):
                 
     return avg_gradient       
                 
-
-
-# unused func
-def Record_by_CSV( filename, cnt_list, contour_image ):
-    
-    coordinar_list = [ [ 'Group','Y','X' ] ]
-    img = contour_image.copy()
-    #img[:]=BLACK
-    # for each group
-    for group_i in range( len(cnt_list) ):
-        for cnt in cnt_list[group_i]:
-            x, y = GetMoment(cnt)
-            coordinar_list.append( [ group_i, int(y), int(x) ] )
-            cv2.circle(img,(int(y),int(x)),2,(0,0,255),2)
-    #cv2.imshow('coordinate: '+str(x)+','+str(y),img)
-    #cv2.waitKey(100)
-    f = open(csv_output+filename[:-4]+'.csv',"wb")
-    w = csv.writer(f)
-    w.writerows(coordinar_list)
-    f.close()       
-    
 def Sharpen(img):
     
     kernel_sharpen = np.array([[-1,-1,-1,-1,-1],
@@ -1022,51 +890,19 @@ def Eucl_distance(a,b):
     
     return np.linalg.norm(a-b) 
 
-# unused func
-def Draw_image( image_resi, c_list, label_list, max_label ):
-    
-    if type(label_list) != np.ndarray :
-        label_list = np.array(label_list)
-    
-    samples_mask = np.zeros_like(c_list, dtype=bool)
-    samples_mask[:] = True     
-    index_mask = ( label_list == max_label )
-    image = image_resi.copy()
-    contour_image = np.zeros(image_resi.shape, np.uint8)
-    contour_image[:] = BLACK            
-
-    c_list = np.array(c_list)
-    for c in c_list[samples_mask ^ index_mask]  : 
-        if len(c_list) > 1 :
-            cv2.drawContours( contour_image, [c], -1, GREEN, 1 )
-        else:
-            cv2.drawContours( contour_image, c_list, -1, GREEN, 1 )
-
-    tmp_c = []
-    drawed_list = []
-    max_contour_list = list(c_list[samples_mask & index_mask])
-    max_contour_list.sort( key = lambda x: len(x) , reverse = False) 
-    
-    #print 'len(max_contour_list):',len(max_contour_list)
-    count_loss = 0
-    for c in max_contour_list  :  
-        if len(max_contour_list) > 1 :
-            #if IsOverlapAll( c, drawed_list ) :
-                #count_loss += 1
-                #tmp_c = c
-                #continue               
-            cv2.drawContours( contour_image, [c], -1, RED, 1 )                      
-            cv2.drawContours( image, [c], -1, RED, 1 )
-            drawed_list.append(c)
-            tmp_c = c
-        else:
-            cv2.drawContours( contour_image, max_contour_list, -1, RED, 1 )
-            cv2.drawContours( image, max_contour_list, -1, RED, 1 )                    
-        
-    combine_image = np.concatenate((image, contour_image), axis=1)      
-    return combine_image, count_loss
-
 def CheckOverlap( cnt_dic_list, keep = 'keep_inner' ):
+    '''
+    @param 
+    keep = 'keep_inner'(default) : 
+    Since OpenCV FindContours() will find two contours(inner and outer) of a single closed 
+    edge component, we choose the inner one to preserve. (The reason is that the outter one 
+    is easily connected with the surroundings.)
+    
+    keep = 'group_weight' : 
+    Since there's two edge results(Canny and SF), we should decide which contours
+    to preserved if they are overlapped.
+    check if overlap contours are same contour , if true makes them same label
+    '''
     
     if cnt_dic_list == []:
         return []
@@ -1140,12 +976,15 @@ def CheckOverlap( cnt_dic_list, keep = 'keep_inner' ):
     return checked_list
         
 def IsOverlap( cnt1, cnt2 ):
+    '''
+    Determine that if one contour contains another one.
+    '''
     
     if cnt1 == [] or cnt2 == [] :
         return False
     
-    c1M = GetMoment(cnt1)
-    c2M = GetMoment(cnt2)
+    c1M = GetCentroid(cnt1)
+    c2M = GetCentroid(cnt2)
     c1_min_d = MinDistance(cnt1)
     c2_min_d = MinDistance(cnt2)
     moment_d = Eucl_distance( c1M, c2M )
@@ -1156,12 +995,15 @@ def IsOverlap( cnt1, cnt2 ):
     return ( moment_d < c1_min_d or moment_d < c2_min_d ) and max(c1_min_d,c2_min_d)/min(c1_min_d,c2_min_d) <= 3
 
 def IsOverlapAll( cnt_dic, cnt_dic_list ):
+    '''
+    Determine if one contour contains/contained  other contours in a input list.
+    '''
     
     if cnt_dic == [] or len(cnt_dic_list) < 1 :
         return False
 
     for c_dic in cnt_dic_list :
-        #if len(c) == len(cnt) and GetMoment(c) == GetMoment(cnt):
+        #if len(c) == len(cnt) and GetCentroid(c) == GetCentroid(cnt):
             ##print 'same one'
             #continue
         if IsOverlap( cnt_dic['cnt'], c_dic['cnt'] ) :
@@ -1170,6 +1012,10 @@ def IsOverlapAll( cnt_dic, cnt_dic_list ):
     return False
 
 def SplitColorChannel( img ):
+    '''
+    Find all the attribute of three color models. (RGB/HSV/LAB)
+    Return in a dictionary type.
+    '''
     
     bgr_gray = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY ) 
     #bgr_gray = cv2.GaussianBlur(bgr_gray, (3, 3), 0)  
@@ -1215,6 +1061,11 @@ def SplitColorChannel( img ):
                  },{ 'img_lab':lab, 'img_l':lab_l, 'img_a':lab_a, 'img_b':lab_b, 'thre_l':thresh_lab_l, 'thre_a':thresh_lab_a, 'thre_b':thresh_lab_b }
 
 def ShowResize( img ):
+    '''
+    Resize the image depend on ratio parameter('_show_resize[]') before showing image.
+    
+    @Return : a resized image
+    '''
     
     h, w = img.shape[:2]
     
@@ -1226,8 +1077,11 @@ def ShowResize( img ):
     return cv2.resize( img, (0,0), fx = ratio, fy = ratio )
         
 def MinDistance(cnt):
+    '''
+    Calculate the minimum distance between centroid to the contour.
+    '''
     
-    cM = GetMoment(cnt)
+    cM = GetCentroid(cnt)
     if len(cnt[0][0]) == 1:
         cnt = cnt[0]
     min_d = Eucl_distance( (cnt[0][0][0],cnt[0][0][1]), cM )
@@ -1253,7 +1107,10 @@ def LAB2Gray(img):
             
     return gray
     
-def GetMoment(cnt):
+def GetCentroid(cnt):
+    '''
+    Calculate the average coordinate as centroid.
+    '''
     
     num = len(cnt)
     if num < 2 :
@@ -1269,6 +1126,13 @@ def GetMoment(cnt):
     return float(cx)/num, float(cy)/num
 
 def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method = 'elbow' ):
+    '''
+    @Goal 
+    Cluster the contours.
+    
+    ref1 : https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
+    ref2 : http://mirlab.org/jang/books/dcpr/dcHierClustering.asp?title=3-2%20Hierarchical%20Clustering%20(%B6%A5%BCh%A6%A1%A4%C0%B8s%AAk)&language=chinese
+    '''
 
     if len(feature_list) < 2:
         return [0]*len(feature_list)
@@ -1284,9 +1148,9 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
         return [0]*len(feature_list)   
     
     # hierarchically link cnt by order of distance from distance method 'ward'
-    #print feature_list
+    # Output a hierarchical tree as ppt. page 22.
     cnt_hierarchy = linkage( feature_list, 'ward')
-    #cnt_hierarchy = linkage( feature_list)
+
     
     max_d = 10
     if cut_method == 'elbow' or True:
@@ -1309,6 +1173,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
         avg_list = [x for x in acceleration if x > avg_diff]
         avg_diff = sum(avg_list)/float(len(avg_list))
         
+        # a controversial parameter !!!!!!!!!!!!!!!!!!!!!!!!!
         off_set = 5
         
         rario = []
