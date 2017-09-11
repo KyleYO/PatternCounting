@@ -1,3 +1,11 @@
+
+'''
+Goal : 
+Extract features for clustering from filtered contours.
+The features contains three clustering features (color, size, shape) and one obviousity feature.(color gradient)
+
+'''
+
 import cv2, time
 import sys
 import numpy as np
@@ -17,6 +25,7 @@ BLACK = (0,0,0)
 
 offset_index = 0
 
+
 def extract_feature( image, contours ):
     
        
@@ -25,10 +34,23 @@ def extract_feature( image, contours ):
     if len(contours) < 1:
         print 'No any contour'
         return  [], [], [], [], []
-
+    
+    '''
+    record the distance between pixels and the centroid
+    the number of sample distance depend on the dimension of the contour
+    '''
     c_list_d = []
+    
+    ''' record the color gradient of the contour '''
     cnt_color_gradient_list = []
+    
+    '''every pixel coordinate in the contour'''
     c_list = []
+    
+    '''
+    several probable dimension of contour shape
+    If pixel s of the contour is between 4-8 , then we take 4 as its dimension.
+    '''
     factor_360 = [4,8,20,40,90,180,360] 
     min_contour_len = len(contours[0])
     
@@ -103,7 +125,7 @@ def extract_feature( image, contours ):
         #for t in tmp_list:
             #t['distance'] = t['distance']/max_dis
             
-            
+        '''Ellipse fitting'''    
         ellipse = cv2.fitEllipse(contours[i])     
         
      
@@ -161,7 +183,16 @@ def extract_feature( image, contours ):
     return  c_list, c_list_d, cnt_intensity_list, size_list, cnt_color_gradient_list
 
 
+'''
+Goal :
+shift the cnt_list  to make the starting point to the main angle 
+
+@param 
+main angle : Let the ellipse fit the contour and take the long axis points' angle as main angle
+(We take y+ axis as 0')
+'''
 def rotate_contour( contour_list, main_angle ):
+    
     #print main_angle
   
     min_distance = 1000
