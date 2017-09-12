@@ -256,10 +256,27 @@ def rotate_contour( contour_list, main_angle ):
     
     return rotate_list 
 
+'''
+@param 
+contour_list : rotated (shifted) contour list that the starting point to the main angle 
+n_sample : the sample refers to the PR80 point's dimension
+'''
 def sample_by_angle( img, contour_list, n_sample ):
     
+    '''
+    Record the angle of the sample points to the centorid
+    EX : If n_sample = 4 , the list will contain [90,180,270,360].
+    '''
     angle_hash = []
+    '''
+    Record distance, angle and corrdinate of the sample points.
+    The order (length) will be as same as angle_hash.
+    '''
     sample_list = []
+    '''
+    EX : If the PR80 point is 40' , the acceptable angle could be 39.7' - 40.3' ; otherwise,
+    doing the interpolation.
+    '''
     angle_err = 0.3
     tmp_i = 0
 
@@ -298,11 +315,23 @@ def sample_by_angle( img, contour_list, n_sample ):
         # end contour_list for 
     # end angle for
     
+    '''
+    Output the list that record the distance of the sample points.
+    The distance list actually represents the shape vector.
+    '''
     distance_list = []
+    
+    '''
+    Output the coordinate of the smaple points.
+    '''
     coordinate_list = []
+    
     angle_hash.append(360.0)
     sample_list.append( { 'distance':sample_list[0]['distance'], 'angle':360.0, 'coordinate':contour_list[0]['coordinate'] } )
     
+    '''
+    Output the color gradient of the sample points as an obviousity .
+    '''
     cnt_color_gradient = 0.0
     
     # use interpolat to complete the sample angle distance
@@ -327,8 +356,12 @@ def sample_by_angle( img, contour_list, n_sample ):
     #if len(distance_list) != 360 :
         #print distance_list
     #print 'len(coordinate_list):',coordinate_list
-    return distance_list, coordinate_list, cnt_color_gradient/360.0
+    return distance_list, coordinate_list, cnt_color_gradient/n_sample
 
+'''
+Goal : 
+Calculate the color gradient of the sample points.
+'''
 def Color_distance_by_angle( img, coordinate, angle, modle = 'lab' ):
     
     if modle == 'lab':
@@ -340,6 +373,7 @@ def Color_distance_by_angle( img, coordinate, angle, modle = 'lab' ):
         coordinate_A = [0,0]
         coordinate_B = [0,0]
         
+        '''Find two related points in the 5*5 matrix'''
         if ( angle >= 0 and angle < 15 ) or ( angle >= 345 ) or ( angle >= 165 and angle < 195 ) :
             coordinate_A = [ coordinate[0], coordinate[1]-2 ]
             coordinate_B = [ coordinate[0], coordinate[1]+2 ]            
@@ -365,6 +399,7 @@ def Color_distance_by_angle( img, coordinate, angle, modle = 'lab' ):
             coordinate_A = [ coordinate[0]+1, coordinate[1]+2 ]
             coordinate_B = [ coordinate[0]-1, coordinate[1]-2 ] 
         
+        '''Prevent that the contour is near the boundary'''
         height, width = img.shape[:2]
         coordinate_A[0] = max(coordinate_A[0],0)
         coordinate_A[1] = max(coordinate_A[1],0)
@@ -376,6 +411,7 @@ def Color_distance_by_angle( img, coordinate, angle, modle = 'lab' ):
         coordinate_B[1] = min(coordinate_B[1],height-1)        
         
         # (x,y) x for height, y for width
+        '''Take the color gradient value of the related points'''
         point_A_l_value = float(img_l[coordinate_A[1],coordinate_A[0]])
         point_A_a_value = float(img_a[coordinate_A[1],coordinate_A[0]])
         point_A_b_value = float(img_b[coordinate_A[1],coordinate_A[0]])
@@ -401,16 +437,21 @@ def Interpolation( a, a_d, b, b_d, i ):
 def Interpolation_coordinate( a, a_d, b, b_d, i ):  
     return np.array( [ int(round( a_d[0]+ (b_d[0]-a_d[0])*( float(i-a)/(b-a) ) )) , int(round( a_d[1] + (b_d[1]-a_d[1])*( float(i-a)/(b-a) ) ) ) ] )
 
+'''
+Calculate the color feature used for clustring.
+'''
 def FindCntAvgColorInetnsity( cnt, img ):
     
     mask = np.zeros(img.shape[:2], np.uint8)
     mask[:] = 0
     cnt = cv2.convexHull( np.array(cnt))
+    '''Fill the contour in order to get the inner points'''
     cv2.drawContours( mask, [cnt], -1, 255, -1 )
     cv2.drawContours( mask, [cnt], -1, 0, 1 )    
    
     avg = [0.0,0.0,0.0]
     img_lab = cv2.cvtColor(img,cv2.COLOR_BGR2LAB)
+    '''Get the lab value according to the coordinate of all points inside the contour'''
     cnt_lab = img_lab[mask==255]
     num = len(cnt_lab)
     
