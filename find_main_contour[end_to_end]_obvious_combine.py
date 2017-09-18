@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 
 
 
-
 GREEN = (0,255,0)
 BLUE = (255,0,0)
 RED = (0,0,255)
@@ -28,24 +27,31 @@ PURPLE = (205,0,205)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 switchColor = [(255,255,0),(255,0,255),(0,255,255),(255,0,0),(0,255,0),(0,0,255),(255,128,0),(255,0,128),(128,0,255),(128,255,0),(0,128,255),(0,255,128),(128,128,0),(128,0,128),(0,128,128),(255,64,0),(255,0,64),(64,255,0),(64,0,255),(0,255,64),(0,64,255)]
-#switchColor = [(255,0,255),(0,255,255),(255,0,0),(0,255,0),(255,128,0),(255,0,128),(128,0,255),(128,255,0),(0,128,255),(0,255,128),(255,255,0)]
 
-
+# 736 will make the colony perfomance the best. (ref to yun-tao colony)
 resize_height = 736.0
+# sliding window's split number 
 split_n_row = 1
 split_n_column = 1
-gaussian_para = 3
-small_filter_threshold = (500*30) / float(736*736)
 
+gaussian_para = 3
+
+# Several Flags
 _sharpen = True
+
+# Filter Flag
 _remove_small_and_big = True
 _remove_high_density = True
 _remove_too_many_edge = True
+
 _gaussian_filter = True
+# Tells that which method is used first
 _use_structure_edge = True
+# Only used in SF
 _enhance_edge = True
+# Decide whether local/global equalization to use (True-->Local)
 _gray_value_redistribution_local = True
-_record_by_csv = False
+# Decide if excecute 1st evalution 
 _evaluate = False
 
 
@@ -56,7 +62,7 @@ output_path = '../../output/'
 
 csv_output = '../../output_csv_6_8[combine_result_before_filter_obvious]/'
 evaluate_csv_path = '../../evaluate_data/groundtruth_csv/¤@¯ë¤Æcsv/' 
-
+# When doing Canny edge detection , this para decide which channel to be the gradient standard
 _edge_by_channel = ['bgr_gray']
 
 _showImg = { 'original_image':True, 'original_edge':False, 'enhanced_edge':False, 'original_contour':True, 'contour_filtered':True, 'size':True, 'shape':True, 'color':True, 'cluster_histogram':False , 'original_result':True, 'each_obvious_result':True, 'combine_obvious_result':True, 'obvious_histogram':False, 'each_group_result':True, 'result_obvious':True, 'final_each_group_result':True, 'final_result':False }
@@ -68,8 +74,6 @@ test_one_img = { 'test':True , 'filename': 'IMG_ (66).jpg' }
 
 def main():
     
-    
-   
     switch_i = 0
 
     max_time_img = ''
@@ -203,7 +207,6 @@ def main():
                  
                 else:
                     #golbal equalization
-                    print 'Equalization'
                     edged = cv2.equalizeHist(edged)            
                 
                 if _showImg['enhanced_edge']:
@@ -271,6 +274,7 @@ def main():
                     small_cnt_count += 1
                     
             # normal pic for small noise more than 500
+            '''60 Changeable'''
             if small_cnt_count > 500:
                 cnt_min_size = 60
             # colony pic for small noise less than 500 (400 for colonies and 100 for error tolerance)
@@ -285,12 +289,12 @@ def main():
                 if _remove_small_and_big :
                     # remove too small or too big contour
                     # contour perimeter less than 1/3 image perimeter 
+                    '''Changeable'''
                     if len(c) < cnt_min_size or len(c) > (re_height+re_width)*2/3.0: 
                         continue        
                              
                 if _remove_high_density :
                     # remove contour whose density is too large or like a line
-                    #print 'Remove contour with high density'
                     area = cv2.contourArea(c) 
                     shape_factor = 4*np.pi*area / float( pow(len(c), 2 ) )
                     if cv2.contourArea(cv2.convexHull(c)) == 0:
@@ -790,13 +794,29 @@ def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio
     groundtruth_count = len(groundtruth_list)
     program_count = len(cnt_area_coordinate)
     
-   
+    #_________The 1st Evaluation and the preprocessing of the 2nd evaluation_____________________________
+    '''
+    @param
+    g_dic : the coordinate of one contour in the groundtruth list (g means groundtruth)
+    cnt_dic : one contour(all pixels' coordinate in a contour area) in the cnt_area_coordinate
+    cnt_area_coordinate : All contours that the program found in one image 
+    
+    If g_dic is in cnt_dic (which means one of the groundtruth contours matches one of the contours that the program found),
+    save both label of cnt_dic and the coordinate of g_dic in the translate list.
+    '''
     for g_dic in groundtruth_list:
-        for cnt in cnt_area_coordinate:
-            if [g_dic['Y'],g_dic['X']] in cnt :
+        for cnt_dic in cnt_area_coordinate :
+            if [int(g_dic['Y']*resize_ratio),int(g_dic['X']*resize_ratio)] in cnt_dic['coordinate'] :
                 tp += 1
-                cnt_area_coordinate.remove(cnt)
-                break
+                cnt_area_coordinate.remove(cnt_dic)
+                translate_list.append( [ cnt_dic['label'], g_dic['Y'], g_dic['X'] ] )
+                break    
+            
+    '''Make a csv that save the translate list.'''   
+    f = open(csv_output+fileName[:-4]+'.csv',"wb")
+    w = csv.writer(f)
+    w.writerows(translate_list)
+    f.close()
     
     fp = program_count - tp
     fn = groundtruth_count - tp
@@ -811,6 +831,7 @@ def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio
         er = abs( program_count - groundtruth_count ) / float(groundtruth_count)
     print program_count,groundtruth_count
     return tp, fp, fn, pr, re, fm, er
+    #_____________________1 st evaluation end__________________________________________________
 
 def Get_Cnt_Area_Coordinate( img, final_group_cnt ):
     '''
