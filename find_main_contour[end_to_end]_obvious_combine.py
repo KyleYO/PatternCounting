@@ -73,8 +73,6 @@ _show_resize = [ ( 720, 'height' ), ( 1200, 'width' ) ][0]
 test_one_img = { 'test':True , 'filename': 'IMG_ (66).jpg' }
 
 def main():
-    
-    switch_i = 0
 
     max_time_img = ''
     min_time_img = ''
@@ -128,7 +126,7 @@ def main():
         if _writeImg['original_image']:
             cv2.imwrite(output_path+fileName[:-4]+'_a_original_image.jpg', image_resi )        
            
-        
+        # combine two edge detection result
         final_differ_edge_group = []
         
         #check if two edge detection method is both complete
@@ -245,6 +243,7 @@ def main():
              
                  
             tmp_cnt_list = [contours[0]]
+            # the first contour
             tmp_cnt = contours[0]
             # check isOverlap
             # Since if is overlap , the order of the overlapped contours will be continuous 
@@ -315,15 +314,7 @@ def main():
    
                 contour_list.append(c)
             # end filter contour for
-            
-            contour_dic_list = []
-            for cnt in contour_list:
-                contour_dic_list.append( {'cnt':cnt} )
-        
-            
-            contour_list = []
-            for cnt_dic in contour_dic_list:
-                contour_list.append(cnt_dic['cnt'])
+ 
                 
             if len(contour_list) == 0 :
                 continue
@@ -345,10 +336,23 @@ def main():
                 cv2.waitKey(100)
             if _writeImg['contour_filtered']:
                 cv2.imwrite( output_path + fileName[:-4] +'_e_contour_filtered['+str(edge_type)+'].jpg', contour_image )
+            #__________end of drawing______________________
 
             print 'Extract contour feature'
             # line 382 - line 520 feature extraction and cluster
             # Get contour feature
+            '''
+            @param 
+            c_list = contour_list
+            cnt_dic_list : every contour will save its coordinate and following 4 attributes
+            
+            # 3 filter factors
+            cnt_shape_list : shape vector list , dimension : dynamic
+            cnt_color_list : RGB , dimension = 3
+            cnt_size_list : size , dimension = 1
+            
+            cnt_color_gradient_list : one of obviousity factors
+            '''
             c_list, cnt_shape_list, cnt_color_list, cnt_size_list, cnt_color_gradient_list = get_contour_feature.extract_feature( image_resi, contour_list )
 
             cnt_dic_list = []
