@@ -16,7 +16,6 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
 
-
 GREEN = (0,255,0)
 BLUE = (255,0,0)
 RED = (0,0,255)
@@ -418,21 +417,14 @@ def main():
                 
             unique_label, label_counts = np.unique(combine_label_list, return_counts=True)      
             label_dic = dict(zip(unique_label, label_counts))
-            max_label = max( label_dic.iteritems(), key=operator.itemgetter(1) )[0]
        
             # find the final group by the intersected label and draw
             final_group = []  
             contour_image = np.zeros(image_resi.shape, np.uint8)
             contour_image[:] = BLACK     
-            contour_image_max = np.zeros(image_resi.shape, np.uint8)
-            contour_image_max[:] = BLACK 
-            
-           
+         
             color_index = 0   
             for label in unique_label :
-                contour_image_each = image_resi.copy()
-                # darken the image to make the contour visible
-                contour_image_each[:] = contour_image_each[:]/3.0
                 COLOR = switchColor[ color_index % len(switchColor) ]
                 color_index += 1
                 tmp_group = []
@@ -451,12 +443,10 @@ def main():
                     continue
                 
                 cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
-                cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
                 
                 final_group.append( { 'cnt':tmp_cnt_group,'obvious_weight':0, 'group_dic':tmp_group } )
                 
-                contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
-                                
+                              
             # end find final group for
             # sort the group from the max area to min group and get max count
            
@@ -477,6 +467,7 @@ def main():
             for f_edge_group in final_group:
                 final_differ_edge_group.append(f_edge_group)            
         # end two edge method for
+   
      
         # check two edge contour overlap
         compare_overlap_queue = []
@@ -494,16 +485,12 @@ def main():
         compare_overlap_queue = CheckOverlap( compare_overlap_queue, keep = 'group_weight' )  
         
         contour_image[:] = BLACK
-        _label = [x['label'] for x in compare_overlap_queue]
+        _label = [x['label'] for x in compare_overlap_queue]    
+        print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]  
         
-        print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]                
         final_group = []            
         
         for label_i in range( total_group_number ):
-        #for label in unique_label :
-            contour_image_each = image_resi.copy()
-            # darken the image to make the contour visible
-            contour_image_each[:] = contour_image_each[:]/3.0
             COLOR = switchColor[ color_index % len(switchColor) ]
             color_index += 1
             tmp_group = []
@@ -517,37 +504,30 @@ def main():
             tmp_cnt_group = []
             avg_color_gradient = 0.0
             avg_shape_factor = 0.0
-            tmp_area = 0.0
-            
+            cnt_area = 0.0
             
             
             #for each final group count obvious factor
             for cnt_dic in tmp_group:
                 cnt = cnt_dic['cnt']
-                cnt_area = cv2.contourArea(cnt)
-                tmp_area += cnt_area
-                avg_shape_factor += cnt_area/float(cv2.contourArea(cv2.convexHull(cnt)))
+                tmp_area = cv2.contourArea(cnt)
+                cnt_area += tmp_area
+                avg_shape_factor += tmp_area/float(cv2.contourArea(cv2.convexHull(cnt)))
                 avg_color_gradient += cnt_dic['color_gradient']
                 tmp_cnt_group.append(cnt)
             
             avg_shape_factor /= float(len(tmp_group))
             avg_color_gradient /= float(len(tmp_group))
-            avg_area = tmp_area / float(len(tmp_group))
+            avg_area = cnt_area / float(len(tmp_group))
             
             if len(tmp_cnt_group) < 2 :
                 continue
-            
-            
-            
-        
+                     
             cv2.drawContours( contour_image, np.array(tmp_cnt_group), -1, COLOR, 2 )
-            cv2.drawContours( contour_image_each, np.array(tmp_cnt_group), -1, COLOR, 2 )
+        
+            final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':cnt_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'group_dic':tmp_group } )
             
-            
-            final_group.append( { 'cnt':tmp_cnt_group, 'avg_area':avg_area, 'cover_area':tmp_area, 'color_gradient':avg_color_gradient, 'shape_factor':avg_shape_factor, 'obvious_weight':0, 'group_dic':tmp_group } )
-            
-            contour_image_each = cv2.resize( contour_image_each, (0,0), fx = float(color_image_ori.shape[0])/contour_image_each.shape[0], fy = float(color_image_ori.shape[0])/contour_image_each.shape[0])
-                         
+                        
         # end find final group for  
         
         if _showImg['original_result']:
@@ -584,6 +564,7 @@ def main():
                 area_list.append(final_group[i][obvious_para])
                 diff = final_group[i-1][obvious_para] - final_group[i][obvious_para] 
                
+                '''0.5 Changeable'''
                 if diff > max_diff:
                     if obvious_para == 'cover_area' and 0.5*final_group[i-1][obvious_para] < final_group[i][obvious_para] :
                         continue
@@ -603,6 +584,7 @@ def main():
                 
             for i in range( obvious_index+1, len(final_group) ):
                 COLOR = RED
+                '''0.8 Changeable'''
                 if  obvious_para == 'shape_factor' and final_group[i]['shape_factor'] >= 0.8 :
                     COLOR = GREEN
                     final_group[i]['obvious_weight'] += 1
@@ -643,23 +625,12 @@ def main():
                     
         # end choose obvious way if 
         
-        # search other contour by previous found obvious contours
-        #-------------------------------------------------------------------------------------
-        
-        #final_obvious_group = Search_whole_Img_by_Obvious_Cnt( image_resi, final_obvious_group )
-       
-        #-------------------------------------------------------------------------------------
-       
-        final_differ_edge_group = final_obvious_group
-       
-        #end scale for
-        
         final_nonoverlap_cnt_group = []
         compare_overlap_queue = []
-        total_group_number = len( final_differ_edge_group )
+        total_group_number = len( final_obvious_group )
         # get all group cnt and filter overlap 
         for group_index in range( total_group_number ) :
-            cnt_group = final_differ_edge_group[group_index]['group_dic']
+            cnt_group = final_obvious_group[group_index]['group_dic']
             
             for cnt_dic in cnt_group:
                 compare_overlap_queue.append( { 'cnt':cnt_dic['cnt'], 'label':group_index, 'group_weight':len(cnt_group), 'color':cnt_dic['color']  } )
@@ -673,6 +644,7 @@ def main():
             for cnt_dic in compare_overlap_queue:
                 if cnt_dic['label'] == label_i : 
                     tmp_group.append( cnt_dic['cnt'] )
+                    '''10 Changeable'''
                     approx = cv2.approxPolyDP(cnt_dic['cnt'], 10, True)
                     factor = 4*np.pi*cv2.contourArea(cnt_dic['cnt'])/ float(pow(len(cnt_dic['cnt']),2))
                     if factor < 0.9:
@@ -938,9 +910,14 @@ def CheckOverlap( cnt_dic_list, keep = 'keep_inner' ):
         
         label_list = [ x['label'] for x in cnt_dic_list ]
         label_change_list = []
+        ''''''
         label_group_change = []
         label_change_dic = {}  
         
+        '''
+        Compare each 2 contours and check if they are overlapped.
+        If they are overlapped, change the label of the less group count one to the other's label whose group count is more.
+        '''
         for cnt_i in range( len(cnt_dic_list)-1 ):
             for cnt_k in range( cnt_i+1, len(cnt_dic_list) ):
                 
@@ -957,6 +934,7 @@ def CheckOverlap( cnt_dic_list, keep = 'keep_inner' ):
         
         # check if overlap contours are same contour , if true makes them same label
         for label_change in set(label_change_list):
+            '''0.5 Changeable'''
             if label_change_list.count(label_change) >= 0.5*label_list.count(label_change[0]):
                 found = False
                 for label_group_i in range( len(label_group_change) ):
@@ -981,7 +959,6 @@ def CheckOverlap( cnt_dic_list, keep = 'keep_inner' ):
                 if cnt_dic['label'] in label_change_dic:
                     cnt_dic['label'] = label_change_dic[cnt_dic['label']]
                 checked_list.append(cnt_dic)
-        
     else:
         
         if keep == 'keep_inner':
@@ -1176,13 +1153,13 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
     # Output a hierarchical tree as ppt. page 22.
     cnt_hierarchy = linkage( feature_list, 'ward')
 
-    
-    max_d = 10
+    '''Combine two groups only when the group distance is smaller than the max__cut_distance.'''
+    max_cut_distance = 0
     if cut_method == 'elbow' or True:
         last = cnt_hierarchy[:, 2]
-        #print 'last:',last
         last = [ x for x in last if x > 0 ]
-        #print 'last:',last
+        
+        '''distance of grooup distance'''
         acceleration = np.diff(last) 
         
         #acceleration = map(abs, np.diff(acceleration) )
@@ -1198,7 +1175,10 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
         avg_list = [x for x in acceleration if x > avg_diff]
         avg_diff = sum(avg_list)/float(len(avg_list))
         
-        # a controversial parameter !!!!!!!!!!!!!!!!!!!!!!!!!
+        '''
+        5 Changeable, compute a ratio as a reference which decide the max_cut_distance (dynamic).
+        Which the ratio is (its' own distance of group distance ) / (5 previous (if it exists ) distance of group distance average. )
+        '''
         off_set = 5
         
         rario = []
@@ -1227,14 +1207,14 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
         cut_point_list.sort( key = lambda x : x[1], reverse = True )
         
         #print 'cut index:',cut_point_list[0][0]+1,' diff len:',len(acceleration)
-        max_d = last[cut_point_list[0][0]]
+        max_cut_distance = last[cut_point_list[0][0]]
         max_ratio = cut_point_list[0][1]
         
         if max_ratio < 2.0 :
             print 'all in one group! max_ratio:',max_ratio
             return [0]*len(feature_list)  
         
-        #max_d = last[acceleration.argmax()]
+        #max_cut_distance = last[acceleration.argmax()]
     #elif cut_method == 'inconsistency':
     
     #plt.bar(left=range(len(rario)),height=rario)  
@@ -1248,7 +1228,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
     plt.close()    
     
     #print 'acceleration.argmax():',acceleration.argmax()
-    clusters = fcluster(cnt_hierarchy, max_d, criterion='distance')   
+    clusters = fcluster(cnt_hierarchy, max_cut_distance, criterion='distance')   
     print '----------------------------------'
     return clusters
     
