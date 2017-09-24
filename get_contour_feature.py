@@ -22,10 +22,6 @@ PURPLE = (205,0,205)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-
-offset_index = 0
-
-
 def extract_feature( image, contours ):
     
        
@@ -71,27 +67,23 @@ def extract_feature( image, contours ):
     
     sample_number = min(sample_number,360)
     sample_number = max(sample_number,4)
-    
-    #print 'sample_number:',sample_number
-    
+       
     for i in xrange(len(contours)):
         if len(contours[i]) < min_contour_len :
             min_contour_len = len(contours[i])
-    
-    cor = 0
+ 
     for i in xrange(len(contours)):
         tmp_list = []
-        #print len(contours[i])
         if(len(contours[i])<10):
             continue
        
-        M = cv2.moments(contours[i])
+        M = cv2.moments(contours[i]) #find centroid
         if M['m00']==0:
-            cor += 1
             continue
          
         c_list.append(contours[i])
         
+        # centroid(cx,cy)
         cx = (M['m10']/M['m00'])
         cy = (M['m01']/M['m00'])
         
@@ -100,7 +92,6 @@ def extract_feature( image, contours ):
                
        
         for c in contours[i]:
-            #print c[0],(cx,cy),Eucl_distance(c[0],(cx,cy))
             
             # the (0,0) in image is the left top point
             v1 = ( c[0][1]-cy , cx-c[0][0]  )
@@ -120,41 +111,25 @@ def extract_feature( image, contours ):
             if Eucl_distance(c[0],(cx,cy)) > max_dis:
                 max_dis = Eucl_distance(c[0],(cx,cy))
             tmp_list.append( { 'distance':Eucl_distance(c[0],(cx,cy)),'angle' : angle, 'coordinate' : c[0] } )
-        #print tmp_list  
-        
-        #for t in tmp_list:
-            #t['distance'] = t['distance']/max_dis
+    
+        for t in tmp_list:
+            t['distance'] = t['distance']/max_dis
             
         '''Ellipse fitting'''    
         ellipse = cv2.fitEllipse(contours[i])     
         
-     
-        
+   
         tmp_list = rotate_contour( tmp_list, ellipse[2])
-       
-        #img_copy = image.copy()
-        #draw_rotate_contours = np.array(list(contours[i][offset_index:]) + list(contours[i][:offset_index]))
-        #for c in draw_rotate_contours:
-            #cv2.drawContours(img_copy, [c], -1, (0,255,0), 3)
-            #cv2.imshow('img',img_copy)
-            #cv2.waitKey(5)     
+
             
         distance_list, coordinate_list, cnt_color_gradient = sample_by_angle( image, tmp_list, sample_number )
+        
+        #if len(contours[i]) < 50:
+            #distance_list = [1.0]*len(distance_list)        
       
-        if len(contours[i]) < 50:
-            distance_list = [1.0]*len(distance_list)        
-        #if len(distance_list) != 360 :
-            #print 'len(distance_list):',len(distance_list)
         c_list_d.append( distance_list )
         cnt_color_gradient_list.append( cnt_color_gradient )
-        #img_copy = image.copy()
-        #draw_rotate_contours = np.array(list(contours[i][offset_index:]) + list(contours[i][:offset_index]))
-        #for c in coordinate_list:
-            #cv2.drawContours(img_copy, [np.array([c])], -1, (0,255,0), 3)
-            #cv2.imshow('img',img_copy)
-            #cv2.waitKey(5)         
-        
-        #print sample_by_angle(tmp_list, sample_number) 
+     
     # end contour for
     
     if len(c_list) < 1:
@@ -168,18 +143,16 @@ def extract_feature( image, contours ):
     size_list = []
     max_size = len( max(c_list,key=lambda x:len(x)) )
     for cnt in c_list : 
-        #cnt_rgb_list.append( FindCntAvgRGB(cnt, image) )
-        #cnt_rgb_list.append( FindCntRgbHis(cnt, image) )
-        #cnt_lab_list.append( FindCntLabHis(cnt, image) )
-        #cnt_hsv_list.append( FindCntHsvHis(cnt, image) )
-        cnt_intensity_list.append( FindCntAvgColorInetnsity(cnt, image) )
+        #cnt_rgb_list.append( FindCntAvgRGB(cnt, image) )   # 3 dimension
+        #cnt_rgb_list.append( FindCntRgbHis(cnt, image) )   # 256*3 dimension
+        #cnt_lab_list.append( FindCntLabHis(cnt, image) )   # 256*3 dimension
+        #cnt_hsv_list.append( FindCntHsvHis(cnt, image) )   # 256*3 dimension
+        cnt_intensity_list.append( FindCntAvgLAB(cnt, image) )   # 3 dimension
         
         size_list.append( [max(len(cnt),30)/float(max_size)] )
         #size_list.append( [len(cnt)] )
-    #print 'cor err:',cor   
-    
-        
-      
+   
+     
     return  c_list, c_list_d, cnt_intensity_list, size_list, cnt_color_gradient_list
 
 
@@ -227,15 +200,7 @@ def rotate_contour( contour_list, main_angle ):
         else:
             min_index = index_180
             angle_offset = angle_180     
-        
-        offset_index = min_index
-        
-        #if ( abs(contour_list[i]['angle']-main_angle) < 1 or abs(contour_list[i]['angle']-main_angle-180) < 1 ) and contour_list[i]['distance'] < min_distance :  
-            #min_distance = contour_list[i]['distance']
-            #min_index = i 
-            #angle_offset = contour_list[i]['angle']
-            #offset_index = min_index
-            
+          
     rotate_list = contour_list[min_index:]+contour_list[:min_index]
     
     for i in xrange( len(rotate_list) ):
@@ -243,17 +208,7 @@ def rotate_contour( contour_list, main_angle ):
         if rotate_list[i]['angle'] < 0 :
             rotate_list[i]['angle'] += 360
     
-    #n_180 = 0
-    #offset = rotate_list[0]['angle']
-    #tmp = offset
-    #rotate_list[0]['angle']=0
-   
-    #for i in xrange( 1, len(rotate_list) ):
-        #if tmp - rotate_list[i]['angle'] > 100 :
-            #n_180+=1
-        #tmp = rotate_list[i]['angle']
-        #rotate_list[i]['angle'] = rotate_list[i]['angle']-offset+180*n_180
-    
+
     return rotate_list 
 
 '''
@@ -292,11 +247,7 @@ def sample_by_angle( img, contour_list, n_sample ):
         
         angle_match = False
         for i in xrange( tmp_i, len(contour_list) ):
-              
-            #if angle == 0:
-                #print "contour_list[i]['angle']:",contour_list[i]['angle'],"abs(contour_list[i]['angle']-angle):",abs(contour_list[i]['angle']-angle)
-            #tmp_i = i
-            #print "contour_list[i]['angle']",contour_list[i]['angle'],"angle",angle,"abs(contour_list[i]['angle']-angle)",abs(contour_list[i]['angle']-angle),"deviation",deviation
+         
             if abs(contour_list[i]['angle']-angle) < angle_err and abs(contour_list[i]['angle']-angle) < deviation :
                 angle_match = True
                 deviation = abs(contour_list[i]['angle']-angle)
@@ -308,7 +259,7 @@ def sample_by_angle( img, contour_list, n_sample ):
             #elif index >=0 :
                 #sample_list.append( { 'distance':contour_list[i-1]['distance'], 'angle':contour_list[i-1]['angle'] } )
                 #angle_hash.append(angle)
-                #break
+                #break 
         if angle_match:
             angle_hash.append(angle)
             sample_list.append( { 'distance':sample_distance, 'angle':sample_angle, 'coordinate':sample_coordinate } )
@@ -343,9 +294,7 @@ def sample_by_angle( img, contour_list, n_sample ):
         
         #print 'out:',angle_hash[i]
         for inter_angle in np.arange( angle_hash[i]+per_angle, angle_hash[i+1], per_angle ):      
-            #print 'in:',inter_angle
-            #print angle_hash[i],sample_list[i]['distance'],angle_hash[i+1],sample_list[i+1]['distance'],inter_angle
-            #print Interpolation( angle_hash[i], sample_list[i]['distance'], angle_hash[i+1], sample_list[i+1]['distance'], inter_angle )
+
             distance_list.append( Interpolation( angle_hash[i], sample_list[i]['distance'], angle_hash[i+1], sample_list[i+1]['distance'], inter_angle ) )
             
             Inter_coordinate = Interpolation_coordinate( angle_hash[i], sample_list[i]['coordinate'], angle_hash[i+1], sample_list[i+1]['coordinate'], inter_angle )
@@ -440,7 +389,7 @@ def Interpolation_coordinate( a, a_d, b, b_d, i ):
 '''
 Calculate the color feature used for clustring.
 '''
-def FindCntAvgColorInetnsity( cnt, img ):
+def FindCntAvgLAB( cnt, img ):
     
     mask = np.zeros(img.shape[:2], np.uint8)
     mask[:] = 0
@@ -472,7 +421,7 @@ def FindCntAvgColorInetnsity( cnt, img ):
     intensity = math.sqrt( pow(avg_lab[1],2) + pow(avg_lab[2],2)  )
     
     #return intensity
-    return avg_lab[0:]
+    return avg_lab
 
 def FindCntHsvHis( cnt, img ):
     
