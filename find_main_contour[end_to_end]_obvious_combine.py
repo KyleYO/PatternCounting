@@ -758,6 +758,7 @@ def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio
     # Only compare the count
     er = 0.0
     groundtruth_list = []
+    translate_list = [['Group','Y','X']]
     with open(evaluate_csv_path+fileName+'.csv') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
