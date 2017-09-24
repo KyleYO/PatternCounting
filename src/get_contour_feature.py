@@ -28,7 +28,7 @@ def extract_feature( image, contours ):
     height, width, channel = image.shape
     
     if len(contours) < 1:
-        print ('No any contour')
+        print 'No any contour'
         return  [], [], [], [], []
     
     '''
@@ -68,11 +68,11 @@ def extract_feature( image, contours ):
     sample_number = min(sample_number,360)
     sample_number = max(sample_number,4)
        
-    for i in range(len(contours)):
+    for i in xrange(len(contours)):
         if len(contours[i]) < min_contour_len :
             min_contour_len = len(contours[i])
  
-    for i in range(len(contours)):
+    for i in xrange(len(contours)):
         tmp_list = []
         if(len(contours[i])<10):
             continue
@@ -133,7 +133,7 @@ def extract_feature( image, contours ):
     # end contour for
     
     if len(c_list) < 1:
-        print ('No any contour')
+        print 'No any contour'
         return  [], [], [], [], []    
 
     cnt_rgb_list = []
@@ -180,7 +180,7 @@ def rotate_contour( contour_list, main_angle ):
     index_0 = 0
     index_180 = 0
     
-    for i in range( len(contour_list) ):
+    for i in xrange( len(contour_list) ):
         
         if  abs( contour_list[i]['angle']-main_angle ) < dis_0 :
             dis_0 = abs(contour_list[i]['angle']-main_angle )
@@ -203,7 +203,7 @@ def rotate_contour( contour_list, main_angle ):
           
     rotate_list = contour_list[min_index:]+contour_list[:min_index]
     
-    for i in range( len(rotate_list) ):
+    for i in xrange( len(rotate_list) ):
         rotate_list[i]['angle'] = rotate_list[i]['angle'] - angle_offset
         if rotate_list[i]['angle'] < 0 :
             rotate_list[i]['angle'] += 360
@@ -246,7 +246,7 @@ def sample_by_angle( img, contour_list, n_sample ):
         sample_coordinate = 0
         
         angle_match = False
-        for i in range( tmp_i, len(contour_list) ):
+        for i in xrange( tmp_i, len(contour_list) ):
          
             if abs(contour_list[i]['angle']-angle) < angle_err and abs(contour_list[i]['angle']-angle) < deviation :
                 angle_match = True
@@ -286,7 +286,7 @@ def sample_by_angle( img, contour_list, n_sample ):
     cnt_color_gradient = 0.0
     
     # use interpolat to complete the sample angle distance
-    for i in range( len(angle_hash)-1 ):
+    for i in xrange( len(angle_hash)-1 ):
         distance_list.append( sample_list[i]['distance'] )
         coordinate_list.append( sample_list[i]['coordinate'] )
         
@@ -414,7 +414,7 @@ def FindCntAvgLAB( cnt, img ):
         avg_lab[1] += lab[1]
         avg_lab[2] += lab[2]
    
-    for i in range( len(avg_lab) ):
+    for i in xrange( len(avg_lab) ):
         avg_lab[i] /= float(num)
     
     # count color intensity by A, B (LAB)
@@ -458,7 +458,7 @@ def FindCntHsvHis( cnt, img ):
     maxS = max(S_scale)
     maxV = max(V_scale)
     
-    for i in range(256):
+    for i in xrange(256):
         H_scale[i] /= float(maxH)
         S_scale[i] /= float(maxS)
         V_scale[i] /= float(maxV)  
@@ -500,7 +500,7 @@ def FindCntLabHis( cnt, img ):
     maxA = max(A_scale)
     maxB = max(B_scale)
     
-    for i in range(256):
+    for i in xrange(256):
         L_scale[i] /= float(maxL)
         A_scale[i] /= float(maxA)
         B_scale[i] /= float(maxB)  
@@ -541,7 +541,7 @@ def FindCntRgbHis( cnt, img ):
     maxG = max(G_scale)
     maxB = max(B_scale)
     
-    for i in range(256):
+    for i in xrange(256):
         R_scale[i] /= float(maxR)
         G_scale[i] /= float(maxG)
         B_scale[i] /= float(maxB)  

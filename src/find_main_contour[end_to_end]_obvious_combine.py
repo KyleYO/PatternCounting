@@ -54,13 +54,13 @@ _gray_value_redistribution_local = True
 _evaluate = False
 
 
-input_path = '../input/image/'
+input_path = '../../input/image/'
 # structure forest output
-edge_input_path = '../input/edge_image/'
+edge_input_path = '../../input/edge_image/'
 output_path = '../../output/'
 
-csv_output = '../output_csv_6_8[combine_result_before_filter_obvious]/'
-evaluate_csv_path = '../evaluate_data/groundtruth_csv/ï¿½@ï¿½ï¿½ï¿½csv/'
+csv_output = '../../output_csv_6_8[combine_result_before_filter_obvious]/'
+evaluate_csv_path = '../../evaluate_data/groundtruth_csv/¤@¯ë¤Æcsv/' 
 # When doing Canny edge detection , this para decide which channel to be the gradient standard
 _edge_by_channel = ['bgr_gray']
 
@@ -85,7 +85,7 @@ def main():
         
         
         if(fileName[-3:]!='jpg' and fileName[-3:]!='JPG' and fileName[-4:]!='jpeg' and fileName[-3:]!='png'):
-            print ("Wrong format file: "+fileName)
+            print "Wrong format file: "+fileName
             continue   
         
         start_time = time.time()
@@ -96,11 +96,11 @@ def main():
         if test_one_img['test']:
             fileName =  test_one_img['filename'] 
         
-        print ('Input:',fileName)
+        print 'Input:',fileName
         
         if not os.path.isfile( input_path + fileName ):
-            print (input_path + fileName )
-            print ('FILE does not exist!')
+            print input_path + fileName   
+            print 'FILE does not exist!'
             break
         
         #===========================
@@ -109,8 +109,8 @@ def main():
         #============================    
         
         if not os.path.isfile( edge_input_path + fileName[:-4] + '_edge.jpg' ) and _use_structure_edge:
-            print (edge_input_path + fileName[:-4] + '_edge.jpg')
-            print ('EDGE FILE does not exist!')
+            print edge_input_path + fileName[:-4] + '_edge.jpg'
+            print 'EDGE FILE does not exist!'
             break
         
         # read color image
@@ -130,7 +130,7 @@ def main():
         
         #check if two edge detection method is both complete
        
-        for j in range(2):
+        for j in xrange(2):
             
             edge_type = 'structure'
                      
@@ -146,11 +146,11 @@ def main():
               
                 #filter the noise 
                 if _gaussian_filter :  
-                    print ('Gaussian filter')
+                    print 'Gaussian filter'
                     image_resi = cv2.GaussianBlur(image_resi, (gaussian_para, gaussian_para),0)
                 
                 if _sharpen :
-                    print ('Sharpening')
+                    print 'Sharpening'
                     image_resi = Sharpen(image_resi)
             
                 re_height, re_width = image_resi.shape[:2]
@@ -158,7 +158,7 @@ def main():
                 offset_r = re_height/split_n_row
                 offset_c = re_width/split_n_column
                 
-                print ('Canny Detect edge')
+                print 'Canny Detect edge'
                 edged = np.zeros(image_resi.shape[:2], np.uint8) 
                 
                 for row_n in np.arange(0,split_n_row,0.5):
@@ -193,7 +193,7 @@ def main():
             
             if _enhance_edge and _use_structure_edge:
                 # enhance and close the edge
-                print ('Enhance edge')
+                print 'Enhance edge'
                 #local equalization
                 #refer to : http://docs.opencv.org/3.1.0/d5/daf/tutorial_py_histogram_equalization.html
                 if _gray_value_redistribution_local : 
@@ -219,7 +219,7 @@ def main():
                 _use_structure_edge = True                             
                            
                            
-            print ('Find countour' )
+            print 'Find countour'     
             edged = cv2.threshold(edged,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
             #==============
             # contour detection 
@@ -259,8 +259,8 @@ def main():
             re_height, re_width = image_resi.shape[:2]
             
             # line264 - line 376 Find Contour and Filter
-            print ('Filter contour')
-            print ('------------------------')
+            print 'Filter contour'
+            print '------------------------'
             
             # decide if use small contour filter
             small_cnt_cover_area = 0.0
@@ -318,7 +318,7 @@ def main():
             if len(contour_list) == 0 :
                 continue
             
-            print ('------------------------')
+            print '------------------------'
                        
             
             # draw contour by different color
@@ -337,7 +337,7 @@ def main():
                 cv2.imwrite( output_path + fileName[:-4] +'_e_contour_filtered['+str(edge_type)+'].jpg', contour_image )
             #__________end of drawing______________________
 
-            print ('Extract contour feature')
+            print 'Extract contour feature'
             # line 382 - line 520 feature extraction and cluster
             # Get contour feature
             '''
@@ -366,16 +366,16 @@ def main():
             cnt_N = len(c_list)
             
             if cnt_N < 1:
-                print ('No any contour!')
+                print 'No any contour!'
                 continue            
             
             label_list_dic = {}
             
-            print ('Respectively use shape, color, and size as feature set to cluster')
+            print 'Respectively use shape, color, and size as feature set to cluster'
             # Respectively use shape, color, and size as feature set to cluster
-            for para_index in range( len(para) ):
+            for para_index in xrange( len(para) ):
                 
-                print ('para:',para[para_index])
+                print 'para:',para[para_index]
    
                 contour_feature_list =  feature_dic[para[para_index]]
                 
@@ -393,7 +393,7 @@ def main():
                     COLOR = switchColor[ color_index % len(switchColor) ]
                     color_index += 1
                     tmp_splited_group = []
-                    for i in range( len(label_list) ):
+                    for i in xrange( len(label_list) ):
                         if label_list[i] == label :
                             tmp_splited_group.append( c_list[i] )                        
                     cv2.drawContours( contour_image, np.array(tmp_splited_group), -1, COLOR, 2 )
@@ -412,7 +412,7 @@ def main():
             # intersect the label clustered by size, shpae, and color
             # ex: [0_1_1 , 2_0_1]
             combine_label_list = []
-            for i in range( cnt_N ):
+            for i in xrange( cnt_N ):
                 combine_label_list.append( str(label_list_dic['size'][i]) + '_' + str(label_list_dic['shape'][i]) + '_' + str(label_list_dic['color'][i])  )
                 
             unique_label, label_counts = np.unique(combine_label_list, return_counts=True)      
@@ -428,7 +428,7 @@ def main():
                 COLOR = switchColor[ color_index % len(switchColor) ]
                 color_index += 1
                 tmp_group = []
-                for i in range( cnt_N ):
+                for i in xrange( cnt_N ):
                     if combine_label_list[i] == label :
                         tmp_group.append( cnt_dic_list[i] ) 
                
@@ -457,7 +457,7 @@ def main():
                 cv2.imwrite( output_path + fileName[:-4] +'_g_original_result['+str(edge_type)+'].jpg', contour_image )            
                 
             if len(final_group) < 1:
-                print ('No any pattern')
+                print 'No any pattern'
                 continue
         
             #====================================================================================
@@ -480,13 +480,13 @@ def main():
                 compare_overlap_queue.append( { 'cnt':cnt_dic['cnt'], 'label':group_index, 'group_weight':len(cnt_group), 'cnt_dic':cnt_dic  } )
         
         _label = [x['label'] for x in compare_overlap_queue]
-        print ('label_dic:',[(y,_label.count(y)) for y in set(_label)])
+        print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]
         
         compare_overlap_queue = CheckOverlap( compare_overlap_queue, keep = 'group_weight' )  
         
         contour_image[:] = BLACK
         _label = [x['label'] for x in compare_overlap_queue]    
-        print ('label_dic:',[(y,_label.count(y)) for y in set(_label)]  )
+        print 'label_dic:',[(y,_label.count(y)) for y in set(_label)]  
         
         final_group = []            
         
@@ -494,7 +494,7 @@ def main():
             COLOR = switchColor[ color_index % len(switchColor) ]
             color_index += 1
             tmp_group = []
-            for i in range( len(compare_overlap_queue) ):
+            for i in xrange( len(compare_overlap_queue) ):
                 if compare_overlap_queue[i]['label'] == label_i :
                     tmp_group.append( compare_overlap_queue[i]['cnt_dic'] ) 
                    
@@ -555,7 +555,7 @@ def main():
             
             if obvious_para == 'color_gradient' and final_group[0]['obvious_weight'] < 0 :
                 final_group.remove({ 'cnt':[], 'cover_area':[], 'color_gradient':avg_img_gradient, 'shape_factor':[], 'obvious_weight':-1 })
-                print ('No color_gradient result')
+                print 'No color_gradient result'
                 continue
                 
 
@@ -572,7 +572,7 @@ def main():
                     max_diff = diff
                     obvious_index = i-1
                
-            print ('obvious_index:',obvious_index)
+            print 'obvious_index:',obvious_index
             
             for i in range( obvious_index+1 ):
                 if final_group[i]['obvious_weight'] == -1:
@@ -716,9 +716,9 @@ def main():
         
         
         
-        print ('Finished in ',time.time()-start_time,' s')
+        print 'Finished in ',time.time()-start_time,' s'
      
-        print ('-----------------------------------------------------------' )
+        print '-----------------------------------------------------------'    
         each_img_time = time.time() - start_time
         if each_img_time > max_time : 
             max_time = each_img_time
@@ -733,8 +733,8 @@ def main():
         w.writerows(evaluation_csv)
         f.close()           
             
-    print ('img:', max_time_img ,' max_time:',max_time,'s')
-    print ('img:', min_time_img ,'min_time:',min_time,'s')
+    print 'img:', max_time_img ,' max_time:',max_time,'s'
+    print 'img:', min_time_img ,'min_time:',min_time,'s'
         
 
 def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio, evaluate_csv_path ):
@@ -806,7 +806,7 @@ def Evaluate_detection_performance( img, fileName, final_group_cnt, resize_ratio
         fm = 2*pr*re / (pr+re)
     if groundtruth_count > 0:
         er = abs( program_count - groundtruth_count ) / float(groundtruth_count)
-    print (program_count,groundtruth_count)
+    print program_count,groundtruth_count
     return tp, fp, fn, pr, re, fm, er
     #_____________________1 st evaluation end__________________________________________________
 
@@ -1101,8 +1101,8 @@ def LAB2Gray(img):
     
     gray = np.zeros(img.shape[:2], np.uint8) 
 
-    for i in range(_w):
-        for k in range(_h):
+    for i in xrange(_w):
+        for k in xrange(_h):
             a = int(img[i][k][1])
             b = int(img[i][k][2])
             gray[i,k] = ( a + b )/2
@@ -1147,7 +1147,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
             break
     
     if all_same:
-        print ('all in one group!')
+        print 'all in one group!'
         return [0]*len(feature_list)   
     
     # hierarchically link cnt by order of distance from distance method 'ward'
@@ -1184,7 +1184,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
         
         rario = []
         cut_point_list = []
-        for i in range( 1,len(acceleration) ):
+        for i in xrange( 1,len(acceleration) ):
        
             if acceleration[i] > avg_diff:
                 #cut_point_list.append( [ i, acceleration[i]/(tmp/float(i) ) ] )
@@ -1202,7 +1202,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
             tmp += acceleration[i]
             
         if len(cut_point_list) < 1 :
-            print ('all in one group!')
+            print 'all in one group!'
             return [0]*len(feature_list)     
         
         cut_point_list.sort( key = lambda x : x[1], reverse = True )
@@ -1212,7 +1212,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
         max_ratio = cut_point_list[0][1]
         
         if max_ratio < 2.0 :
-            print ('all in one group! max_ratio:',max_ratio)
+            print 'all in one group! max_ratio:',max_ratio
             return [0]*len(feature_list)  
         
         #max_cut_distance = last[acceleration.argmax()]
@@ -1230,7 +1230,7 @@ def Hierarchical_clustering( feature_list, fileName, para, edge_type, cut_method
     
     #print 'acceleration.argmax():',acceleration.argmax()
     clusters = fcluster(cnt_hierarchy, max_cut_distance, criterion='distance')   
-    print ('----------------------------------')
+    print '----------------------------------'
     return clusters
     
 
@@ -1242,4 +1242,4 @@ if __name__ == '__main__' :
     #_local = False
     ##output_path = './output_global/'    
     #main()
-    print ('All finished in ',time.time()-t_start_time,' s')
+    print 'All finished in ',time.time()-t_start_time,' s'
